@@ -11,6 +11,25 @@ LLM_MOCK=true npm run dev        # http://localhost:3000
 
 Contoh di bawah memakai `B=http://localhost:3000`.
 
+## Login dulu (semua endpoint wajib login)
+
+Sejak fitur login, setiap endpoint selain login dan logout membalas `401` tanpa cookie sesi. Simpan cookie dengan `-c`, lalu kirim dengan `-b`:
+
+```bash
+B=http://localhost:3000
+curl -c cookie.txt -X POST $B/api/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"rina@kampus.test","password":"talentlink2026"}'
+# 200 {"user":{"id":1,"email":"rina@kampus.test","name":"Bu Rina","role":"dosen","roleLabel":"Dosen peneliti"}}
+
+curl -b cookie.txt $B/api/auth/me          # 200 {"user":{...}}
+curl $B/api/runs                           # 401 {"error":"Sesi Anda berakhir. Silakan masuk lagi."}
+curl -b cookie.txt -X POST $B/api/auth/logout   # 200 {"ok":true}; token lama tidak berlaku lagi
+```
+
+Akun demo: `rina@kampus.test` (dosen peneliti) dan `andi@kampus.test` (staf kemahasiswaan), kata sandi `talentlink2026`. Akun dibuat otomatis saat login pertama dan tidak terhapus oleh `npm run seed`.
+
+Semua contoh `curl` di bawah perlu ditambah `-b cookie.txt`.
+
 ## Alur utama: buat run → polling → approve → send
 
 ```bash
@@ -27,7 +46,7 @@ curl $B/api/runs/1
 # 3. Setujui kandidat
 curl -X POST $B/api/runs/1/approve -H 'Content-Type: application/json' \
   -d '{"decision":"approved","candidateCodes":["S-101","S-104"],"messageDraft":"Yth. [Nama Mahasiswa], ..."}'
-# 200 {"decision":"approved","candidateCodes":["S-101","S-104"],"messageDraft":"...","decidedBy":"Dosen pemberi tugas",
+# 200 {"decision":"approved","candidateCodes":["S-101","S-104"],"messageDraft":"...","decidedBy":"Bu Rina (Dosen peneliti)",
 #      "decidedAt":"2026-10-09T15:08:25.778Z","sentAt":null}
 
 # 4. Kirim undangan SIMULASI (aman dipanggil ulang; sentAt tidak berubah)
@@ -39,6 +58,10 @@ curl -X POST $B/api/runs/1/send
 
 | Request | Sukses | Error yang mungkin |
 | --- | --- | --- |
+| `POST /api/auth/login` `{email, password}` | 200 `{user}` + cookie `tl_session` | 400 `Format email belum benar, contoh: nama@kampus.test.` · 400 `Kata sandi wajib diisi.` · 401 `Email atau kata sandi salah.` |
+| `POST /api/auth/logout` | 200 `{ok:true}` | |
+| `GET /api/auth/me` | 200 `{user}` | 401 |
+| Semua endpoint lain tanpa sesi | | 401 `Sesi Anda berakhir. Silakan masuk lagi.` |
 | `GET /api/worker` | 200 `{workers:[{id:"netra",status:"siap",tokensUsed:0,...}], usage:{total,budget:10000000,percent,warn,stop,byWorker}}` | |
 | `POST /api/runs` `{workerId, brief, mode}` | 201 `{runId}` | 400 `Brief terlalu pendek, minimal 15 karakter.` · 400 `Digital Worker ini segera hadir dan belum bisa diberi tugas.` · 400 `Body permintaan harus berupa JSON yang valid.` |
 | `GET /api/runs` | 200 `{runs:[{id,workerId,briefPreview,mode,status,createdAt,totalTokens,errorMessage}]}`, 20 terbaru | |

@@ -21,9 +21,12 @@ Tema diambil dari `design/inspiration/` (dashboard biru langit yang lembut). Nil
 | Progress | `ProgressBar` (wajib `label` untuk pembaca layar) |
 | Kosong / memuat / error | `EmptyState`, `LoadingRows`, `Skeleton`, `ErrorState` (dengan `onRetry`) |
 | Textarea | `TextAreaField` (label menempel di garis atas) |
+| Input satu baris | `InputField` (`components/ui/input-field.tsx`): label di garis atas, ikon di depan, slot `trailing` untuk tombol |
 | Chip ID bukti | `EvidenceChip` (font mono) |
 | Judul halaman | `PageHeader` (`components/app/page-header.tsx`) |
 | Kartu pegawai worker | `WorkerBadge`, `TraineeRow` (`components/app/worker-badge.tsx`) |
+| Kerangka aplikasi | `AppShell` (`components/app/app-shell.tsx`); halaman di `BARE_PAGES` (misalnya `/login`) tampil tanpa kerangka |
+| Pengguna yang login | `UserMenu` di bar atas: inisial, nama, peran, tombol Keluar |
 | Maskot worker | `Mascot` |
 | Status run | `RunStatusBadge` |
 
@@ -56,6 +59,14 @@ Data selalu lewat `app/_lib/api.ts` dan state lewat `useApi` (`app/_lib/use-api.
 - Satu layar memakai susunan bento: ukuran kartu berbeda, jarak `gap-5`, bagian dipisah `mt-10`.
 - Grid mulai satu kolom di layar kecil, dua kolom di `sm`, tiga kolom di `lg`. Cek angka besar tidak terpotong di lebar 768.
 - Rail navigasi tampil mulai `md`; di bawahnya navigasi pill di top bar.
+
+## Halaman login
+
+- Inspirasi `design/inspiration/05-login-split.jpg`: kartu terbelah dua di tengah kanvas abu-abu. Panel kiri `bg-brand-600 pattern-circuit` (bukan foto, bukan gradien); panel kanan form putih.
+- Judul "Selamat datang" besar memakai `text-brand-600`, bukan biru terang inspirasi (kontras gagal).
+- Tanpa tombol Google atau media sosial. Pemisah "atau pakai akun demo" diikuti kartu akun demo berlabel Sintetis.
+- Pesan login gagal selalu "Email atau kata sandi salah." (jangan bocorkan email mana yang terdaftar).
+- Setelah login atau saat sesi berakhir, pakai navigasi penuh agar layout membaca ulang sesi.
 
 ## Bahasa bisnis (mengikuti konsep CBN Digital Worker)
 

@@ -9,6 +9,7 @@ Sumber: `design/inspiration/01–04`. Tokens ini diterapkan di `app/globals.css`
 | 03, 04 Dashboard overview | Kanvas abu-abu lembut, satu panel aplikasi putih bersudut besar, rail ikon di kiri dengan ikon di lingkaran lembut, judul halaman besar, susunan bento dengan ukuran kartu berbeda |
 | 02 Widget | Kartu putih tanpa garis tebal, bayangan sangat tipis, ikon di gelembung bulat, angka besar, tombol pill, kartu sorotan bergaris biru dengan cahaya halus, kartu biru penuh dengan pola sirkuit |
 | 01 Login | Field bergaris dengan label menempel di garis atas (notched label), tombol pill di tengah, pemisah tipis |
+| 05 Login terbelah dua | Kartu login dua panel di tengah layar, judul sambutan besar berwarna brand, field dengan ikon, pemisah "atau" lalu pilihan masuk alternatif. Foto diganti panel `brand-600` berpola sirkuit; tombol media sosial diganti kartu akun demo; latar biru penuh diganti kanvas abu-abu tema |
 
 ## Yang sengaja tidak diambil (aturan anti AI slop di PRD)
 

@@ -17,7 +17,7 @@ Setiap orang hanya mengubah folder miliknya. Jika butuh perubahan di folder oran
 
 | Folder atau file | Pemilik | Catatan |
 | --- | --- | --- |
-| `app/page.tsx`, `app/tasks/`, `app/runs/`, `app/scorecard/` | Rifqi | Halaman |
+| `app/page.tsx`, `app/tasks/`, `app/runs/`, `app/login/` | Rifqi | Halaman |
 | `app/layout.tsx`, `app/globals.css` | Rifqi | Layout dan Tailwind tokens |
 | `app/_lib/` | Rifqi | Klien fetch, fixture mock, helper UI |
 | `components/`, `design/`, `public/mascots/` | Rifqi | |
@@ -25,6 +25,7 @@ Setiap orang hanya mengubah folder miliknya. Jika butuh perubahan di folder oran
 | `app/api/` | Rofiq | Route Handlers |
 | `lib/` (termasuk `lib/types.ts`, `lib/api-types.ts`) | Rofiq | Rifqi hanya boleh `import type` dari sini |
 | `scripts/`, `drizzle.config.ts` | Rofiq | |
+| `proxy.ts`, `lib/auth.ts`, `lib/auth-types.ts`, `lib/session.ts`, `app/api/auth/` | Rofiq (dibuat Rifqi di branch `feat/auth-login`) | Fitur login. Rifqi boleh `import type` dari `lib/auth-types.ts` |
 | `.claude/skills/backend-efisien/` | Rofiq | |
 | `eval/`, `tests/e2e/`, `README.md`, `tech.md` | Reyhan | |
 | `docs/` | Siapa saja, satu berkas satu pemilik | Berkas ini milik bersama; ubah lewat kesepakatan |
@@ -284,6 +285,33 @@ interface CompetitionSummary {
 
 - `kind: "research_invite"` artinya mahasiswa itu baru disetujui dalam penugasan riset Netra. Ini peringatan, bukan pengecualian.
 - `GET /api/worker`: Jaya berstatus `siap` / `bekerja` seperti Netra setelah modul ini di-merge.
+
+### Tambahan: Autentikasi (aditif, 10 Oktober 2026)
+
+Semua endpoint di atas sekarang **wajib login**. Tanpa sesi valid, balasannya `401 { "error": "Sesi Anda berakhir. Silakan masuk lagi." }`. Frontend (`app/_lib/api.ts`) otomatis membuka `/login?next=<halaman sekarang>` saat menerima 401.
+
+Tipe di `lib/auth-types.ts`:
+
+```ts
+export type UserRole = "dosen" | "kemahasiswaan";
+export interface AuthUser { id: number; email: string; name: string; role: UserRole; roleLabel: string }
+export interface LoginBody { email: string; password: string }
+export interface LoginResponse { user: AuthUser }
+export interface MeResponse { user: AuthUser }
+```
+
+| Method | Path | Body | Sukses | Error |
+| --- | --- | --- | --- | --- |
+| POST | `/api/auth/login` | `LoginBody` | 200 `LoginResponse` + cookie `tl_session` (httpOnly, 8 jam) | 400 format email atau kata sandi kosong; 401 `Email atau kata sandi salah.` |
+| POST | `/api/auth/logout` | | 200 `{ ok: true }`; sesi dihapus dan cookie dibersihkan | Tidak pernah gagal karena sesi |
+| GET | `/api/auth/me` | | 200 `MeResponse` | 401 |
+
+Aturan untuk backend:
+
+- Route Handler baru memakai `handle((user) => …)` dari `lib/http.ts`. Wajib login otomatis, dan `user` bisa dipakai untuk jejak audit.
+- `handlePublic()` hanya untuk login dan logout.
+- `POST /api/runs/:id/approve` kini mengisi `decidedBy` dengan `"<nama> (<peran>)"`, misalnya `"Bu Rina (Dosen peneliti)"`. Bentuk `ApprovalView` tidak berubah.
+- Uji `curl` perlu cookie: login dengan `-c cookie.txt`, lalu kirim `-b cookie.txt`. Contoh di `docs/api.md`.
 
 ## 5. Mock untuk frontend
 
