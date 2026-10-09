@@ -1,10 +1,11 @@
-import { UserRound } from "lucide-react";
-import { SimulasiBadge, SintetisBadge } from "@/components/ui/badge";
+import { SintetisBadge } from "@/components/ui/badge";
+import type { AuthUser } from "@/lib/auth-types";
 import { MockBadge } from "./mock-badge";
 import { Logo, NavMobile } from "./nav";
+import { UserMenu } from "./user-menu";
 
-/** Bar atas: identitas produk di kiri, peran simulasi di kanan (pengganti search + profil di inspirasi). */
-export function TopBar() {
+/** Bar atas: identitas produk di kiri, pengguna yang login dan tombol Keluar di kanan. */
+export function TopBar({ user }: { user: AuthUser | null }) {
   return (
     <header className="flex flex-col gap-4 px-4 pt-5 pb-2 sm:px-8 md:pt-7 lg:px-10">
       <div className="flex items-center justify-between gap-4">
@@ -22,16 +23,7 @@ export function TopBar() {
           <span className="hidden lg:inline-flex">
             <SintetisBadge />
           </span>
-          <div className="flex h-12 items-center gap-2.5 rounded-full bg-surface py-1.5 pr-4 pl-1.5 shadow-card">
-            <span className="flex size-9 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-              <UserRound aria-hidden className="size-5" />
-            </span>
-            <span className="hidden flex-col leading-tight sm:flex">
-              <span className="text-[13px] font-medium">Dosen peneliti</span>
-              <span className="text-xs text-ink-muted">Peran tanpa login</span>
-            </span>
-            <SimulasiBadge />
-          </div>
+          {user && <UserMenu user={user} />}
         </div>
       </div>
       <NavMobile />

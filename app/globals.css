@@ -57,10 +57,13 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Fokus keyboard selalu terlihat */
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
+/* Fokus keyboard selalu terlihat. Di layer base agar field yang punya cincin fokus sendiri
+   (kelas focus-visible:outline-none di InputField dan TextAreaField) bisa menimpanya. */
+@layer base {
+  :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
 }
 
 /* Pola sirkuit untuk kartu biru penuh (pengganti gradien) */

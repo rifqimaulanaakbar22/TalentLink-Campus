@@ -26,7 +26,7 @@ export function TextAreaField({
           aria-describedby={describedBy}
           className={cn(
             "block w-full resize-y rounded-field border bg-surface px-4 pt-4 pb-3 text-[15px] leading-5.5 placeholder:text-ink-subtle focus:outline-none focus-visible:outline-none",
-            error ? "border-danger" : "border-line focus:border-brand-500",
+            error ? "border-danger focus:ring-4 focus:ring-danger/15" : "border-line focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15",
           )}
           {...props}
         />

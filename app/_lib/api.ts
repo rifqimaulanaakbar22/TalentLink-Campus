@@ -1,4 +1,5 @@
 // Semua akses data frontend lewat berkas ini. Mode mock: NEXT_PUBLIC_API_MOCK=true di .env.local.
+import type { LoginBody, LoginResponse, MeResponse } from "@/lib/auth-types";
 import { ApiRequestError } from "./errors";
 import { mockApi } from "./mock-store";
 import type {
@@ -28,6 +29,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiRequestError("Tidak bisa terhubung ke server. Pastikan aplikasi berjalan.", 0);
   }
   const body = await res.json().catch(() => null);
+  // Sesi berakhir: kembali ke halaman login, lalu ke halaman ini lagi setelah masuk.
+  if (res.status === 401 && !path.startsWith("/api/auth/") && typeof window !== "undefined") {
+    const here = window.location.pathname + window.location.search;
+    // Navigasi penuh disengaja: modul ini bukan komponen (tanpa router) dan layout harus membaca ulang sesi.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign(`/login?next=${encodeURIComponent(here)}`);
+  }
   if (!res.ok) {
     const message =
       (body && typeof body.error === "string" && body.error) ||
@@ -44,6 +52,13 @@ async function mock<T>(fn: () => T, delay = 300): Promise<T> {
 }
 
 const post = (body?: unknown): RequestInit => ({ method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
+
+/** Autentikasi selalu ke server asli, juga saat mode mock aktif. */
+export const authApi = {
+  login: (body: LoginBody) => request<LoginResponse>("/api/auth/login", post(body)),
+  logout: () => request<{ ok: true }>("/api/auth/logout", post()),
+  me: () => request<MeResponse>("/api/auth/me"),
+};
 
 export const api = {
   getWorkers: () => (USE_MOCK ? mock(() => mockApi.getWorkers()) : request<WorkerResponse>("/api/worker")),
