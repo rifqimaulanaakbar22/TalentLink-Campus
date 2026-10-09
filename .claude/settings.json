@@ -1,0 +1,13 @@
+{
+  "attribution": { "commit": "", "pr": "" },
+  "includeGitInstructions": false,
+  "permissions": {
+    "deny": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Read(./.env)"
+    ]
+  }
+}
