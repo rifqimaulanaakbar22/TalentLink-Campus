@@ -39,7 +39,19 @@ export const MSG = {
   needApproval: "Butuh persetujuan dosen",
   comingSoon: "Digital Worker ini segera hadir dan belum bisa diberi tugas.",
   evidenceNotFound: "Bukti tidak ditemukan.",
+  budgetStop: "Anggaran token sudah mencapai batas berhenti. Penugasan baru ditahan sampai alokasi token ditambah.",
+  comparisonLocked: "Anggaran token sudah melewati batas peringatan, jadi Jalur Pembanding dikunci. Pilih Jalur Hemat.",
 } as const;
+
+/**
+ * Rem anggaran (Neraca Token). Di atas batas berhenti semua penugasan baru ditahan; di atas batas
+ * peringatan Jalur Pembanding (v1) dikunci. Jaya selalu memakai Jalur Hemat, jadi tidak ikut dikunci.
+ */
+function assertBudget(workerId: string, mode: RunMode) {
+  const usage = getTokenUsage();
+  if (usage.stop) throw new ApiError(409, MSG.budgetStop);
+  if (usage.warn && mode === "v1" && workerId !== "jaya") throw new ApiError(409, MSG.comparisonLocked);
+}
 
 // ---------- Skema body ----------
 
@@ -223,6 +235,7 @@ export function createRunFromBody(body: unknown): CreateRunResponse {
   if (!worker || worker.status_rilis !== "aktif") throw new ApiError(400, MSG.comingSoon);
   // Guidebook lomba (Jaya) boleh panjang; brief riset (Netra) cukup 4.000 karakter.
   if (workerId !== "jaya" && brief.length > 4000) throw new ApiError(400, "Brief terlalu panjang, maksimal 4.000 karakter.");
+  assertBudget(workerId, mode);
   return { runId: createRun({ workerId, brief, mode }) };
 }
 
@@ -336,7 +349,9 @@ export function sendInvitation(id: number): SendResponse {
 }
 
 export function retryRun(id: number): { runId: number; status: "queued" } {
-  getRunRow(id);
+  const run = getRunRow(id);
+  if (run.status !== "failed") throw new ApiError(409, MSG.notFailed);
+  assertBudget(run.worker_id, run.mode);
   if (q().retry.run(nowIso(), id).changes !== 1) throw new ApiError(409, MSG.notFailed);
   return { runId: id, status: "queued" };
 }

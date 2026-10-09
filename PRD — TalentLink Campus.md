@@ -1,6 +1,6 @@
 # PRD — TalentLink Campus
 
-Oct 9, 2026 · @Someone · **Revisi 10 Oktober 2026 dini hari: fitur login** (lihat "Riwayat perubahan" di akhir dokumen)
+Oct 9, 2026 · @Someone · **Revisi 10 Oktober 2026: Neraca Token dan Jalur Hemat** (lihat "Riwayat perubahan" di akhir dokumen)
 
 ## Status implementasi (diperbarui 10 Oktober 2026)
 
@@ -10,7 +10,8 @@ Oct 9, 2026 · @Someone · **Revisi 10 Oktober 2026 dini hari: fitur login** (li
 | Lapisan HTTP API (`app/api/*`) | Ada di `master` (endpoint runs, approval, kirim SIMULASI, bukti, worker) |
 | Competition Matching oleh Jaya | Ada di `master` (eligibility, team builder, conflict check) |
 | Frontend (Tim, Tugaskan, Detail penugasan) | Ada di `master`; mode mock tetap tersedia sebagai cadangan demo |
-| **Login dan logout (email + kata sandi)** | **Branch `feat/auth-login`**; 12 unit test autentikasi dan uji browser lulus. Lihat `docs/fitur-login.md` |
+| Login dan logout (email + kata sandi) | Ada di `master`. Lihat `docs/fitur-login.md` |
+| **Neraca Token dan Jalur Hemat** | **Branch `feat/token-management`**; 12 unit test, uji `curl`, dan uji browser lulus. Lihat `docs/fitur-neraca-token.md` |
 | API CBN asli | Belum teruji di laptop frontend (`.env` belum ada) |
 | Skrip eval | Belum ada |
 
@@ -53,14 +54,14 @@ Kampus sudah memiliki data kemampuan mahasiswa, tetapi tersebar di nilai, proyek
 
 ## Tujuan dan metrik keberhasilan
 
-Target di bawah dipakai untuk eval sebelum submission; angka aktualnya diisi dari hasil uji, bukan diasumsikan. Halaman Scorecard/Rapor **ditunda dari UI MVP**; hasil eval ditulis ke `eval/results.md` dan ditampilkan di README dan slide sebagai bukti kriteria AI token efficiency.
+Target di bawah dipakai untuk eval sebelum submission; angka aktualnya diisi dari hasil uji, bukan diasumsikan. Halaman Scorecard/Rapor **ditunda dari UI MVP**; hasil eval ditulis ke `eval/results.md` dan ditampilkan di README dan slide sebagai bukti kriteria AI token efficiency. Penghematan token dari pemakaian nyata tampil di halaman **Neraca Token**.
 
 | Tujuan | Metrik | Target | Kriteria juri |
 | --- | --- | --- | --- |
 | Rekomendasi tepat | Precision@3 pada kasus berlabel | ≥ 0,8 | Solution accuracy 30% |
 | Konsisten dengan sumber | Persentase alasan dengan ID bukti valid setelah verifikasi | 100% | Solution accuracy |
 | Tahan kegagalan | Kasus gagal yang ditangani benar (ambigu, tanpa kandidat, JSON rusak, prompt injection, kirim tanpa approval) | 5 dari 5 | Solution accuracy |
-| Hemat token | Token rata-rata per run v2 dibanding v1 | Lebih rendah dengan precision@3 tidak turun | AI token efficiency 15% |
+| Hemat token | Token rata-rata per penugasan Jalur Hemat (v2) dibanding Jalur Pembanding (v1), terlihat di Neraca Token | Lebih rendah dengan precision@3 tidak turun | AI token efficiency 15% |
 | Log lengkap | Panggilan LLM yang tercatat di Token Ledger | 100% | AI token efficiency |
 | Cepat dipakai | Waktu dari submit brief sampai Link Brief (v2) | < 30 detik | UI/UX 15% |
 | Aman | Pesan terkirim tanpa approval | 0 | Aturan brief |
@@ -89,6 +90,7 @@ Rilis hackathon fokus pada Research Matching lengkap; modul lain dibangun di mes
 | Research Matching oleh Netra | Wajib | Masuk, didemokan penuh |
 | Eval v1 vs v2 lewat skrip (`npm run eval`, hasil di `eval/results.md`) | Wajib | Masuk tanpa halaman UI |
 | Halaman Scorecard/Rapor di UI | Nanti | **Ditunda**; dihapus dari UI MVP agar fokus ke alur utama |
+| Neraca Token (pemantauan anggaran) dan Jalur Hemat (pilihan jalur kerja dengan rem anggaran) | Wajib | Masuk; bukti AI token efficiency di dalam aplikasi |
 | Competition Matching oleh Jaya (parser guidebook, Eligibility Check, Team Builder, Conflict Check) | Sebaiknya | Masuk jika checkpoint 24.00 tercapai; sampai itu Jaya tampil "Dalam pelatihan" |
 
 **Tidak masuk rilis ini:**
@@ -123,6 +125,8 @@ Setiap story memakai format "Sebagai … saya ingin … agar …" dan dipetakan 
 | US-15 | Dosen | Membedakan skill yang belum ada buktinya dari skill yang memang tidak dikuasai | Tidak salah menilai mahasiswa | Wajib |
 | US-16 | Dosen / staf | Masuk dengan email dan kata sandi | Hanya orang berwenang yang melihat data mahasiswa dan keputusan tercatat atas nama saya | Wajib |
 | US-17 | Dosen / staf | Keluar dari aplikasi | Sesi tidak dipakai orang lain di komputer bersama | Wajib |
+| US-18 | Kepala unit / dosen | Memantau token yang terpakai, sisa anggaran, dan penghematan di satu halaman | Biaya Digital Worker terkendali dan bisa dipertanggungjawabkan | Wajib |
+| US-19 | Dosen | Memilih Jalur Hemat atau Jalur Pembanding saat menugaskan Netra, lengkap dengan perkiraan tokennya | Tahu biayanya sebelum menugaskan dan bisa membuktikan penghematan | Wajib |
 
 US-13 dan US-14 (Career Center) dihapus bersama modul Career Readiness.
 
@@ -160,11 +164,26 @@ Pengguna masuk dengan **email dan kata sandi** saja, tanpa login Google atau SSO
 | FR-A7 | Dua akun demo sintetis (dosen dan staf kemahasiswaan) dengan tombol isi otomatis di halaman login, berlabel Sintetis | Wajib | US-16 |
 | FR-A8 | Pembatasan akses per peran (misalnya staf kemahasiswaan hanya ke Jaya) | Nanti | — |
 
+### Neraca Token dan Jalur Hemat
+
+Pengelolaan token: satu halaman untuk memantau anggaran, dan pilihan jalur kerja yang terhubung ke rem anggaran di server. Rincian di `docs/fitur-neraca-token.md`.
+
+| ID | Kebutuhan | Prioritas | Story |
+| --- | --- | --- | --- |
+| FR-T1 | Halaman Neraca Token (`/tokens`, menu "Neraca Token"): token terpakai dari alokasi, sisa sebelum batas berhenti, status Aman/Menipis/Berhenti, meteran dengan garis batas 80% dan 95% | Wajib | US-18 |
+| FR-T2 | Penghematan Jalur Hemat: rata-rata token per penugasan Netra yang sudah menghasilkan Link Brief per jalur, persen lebih hemat, dan token yang sudah dihemat. Penugasan Jaya dan penugasan bertoken 0 tidak ikut dihitung | Wajib | US-18 |
+| FR-T3 | Rincian pemakaian: token per penugasan (20 terakhir, bisa diklik ke jejak kerja), per Digital Worker, per langkah yang memanggil AI, dan token yang tidak lagi terhubung ke penugasan | Wajib | US-18 |
+| FR-T4 | Form Tugaskan Netra menampilkan kartu pilihan Jalur Hemat (bawaan) dan Jalur Pembanding dengan perkiraan token dari Neraca Token (perkiraan PRD jika belum ada data) dan sisa anggaran. Jaya selalu Jalur Hemat tanpa pilihan | Wajib | US-19 |
+| FR-T5 | Rem anggaran di server: mulai batas peringatan (80%) Jalur Pembanding ditolak 409 di `POST /api/runs` dan coba lagi; mulai batas berhenti (95%) semua penugasan baru dan coba lagi ditolak 409 | Wajib | US-18, US-19 |
+| FR-T6 | Tampilan mengikuti rem anggaran: kartu Jalur Pembanding dikunci, tombol Tugaskan nonaktif saat berhenti, banner di Beranda dan Neraca dengan tautan ke Neraca Token | Wajib | US-18 |
+| FR-T7 | `GET /api/tokens` (wajib login) mengembalikan `TokenReport`; hanya membaca Token Ledger, tanpa tabel baru | Wajib | US-18 |
+| FR-T8 | Anggaran per unit atau per worker, riwayat harian, ekspor, notifikasi ke atasan | Nanti | — |
+
 ### Research Matching
 
 | ID | Kebutuhan | Prioritas | Story |
 | --- | --- | --- | --- |
-| FR-R1 | Menerima brief teks bebas dan pilihan mode v1/v2 | Wajib | US-01 |
+| FR-R1 | Menerima brief teks bebas dan pilihan jalur kerja: Jalur Hemat (v2, bawaan) atau Jalur Pembanding (v1) | Wajib | US-01, US-19 |
 | FR-R2 | Mengubah brief menjadi kriteria terstruktur (topik, skill wajib, skill tambahan, semester minimum, jumlah) | Wajib | US-01 |
 | FR-R3 | Mengajukan pertanyaan klarifikasi jika brief tidak menyebut topik atau skill konkret, lalu melanjutkan setelah dijawab | Wajib | US-04 |
 | FR-R4 | Menormalkan nama skill lewat katalog sinonim | Wajib | US-01 |
@@ -203,8 +222,8 @@ Semua panggilan LLM memakai API CBN dari alokasi 10.000.000 token, lewat satu kl
 | AI-3 | Output LLM wajib JSON yang divalidasi skema; gagal validasi → retry sekali → fallback | Wajib |
 | AI-4 | Model ringan untuk parse, model lebih kuat untuk penjelasan | Sebaiknya |
 | AI-5 | Token Ledger mencatat run, langkah, model, token input, token output, latensi per panggilan, dari field usage respons API | Wajib |
-| AI-6 | Budget 10.000.000 token: peringatan di 80%, panggilan ditolak di 95% | Wajib |
-| AI-7 | Mode v1 (semua kandidat ke LLM) dan v2 (top 5, maks 4 bukti relevan) untuk uji efisiensi pada eval set yang sama | Wajib |
+| AI-6 | Budget 10.000.000 token: peringatan di 80% (Jalur Pembanding dikunci), panggilan dan penugasan baru ditolak di 95%; dipantau di Neraca Token | Wajib |
+| AI-7 | Jalur Pembanding/v1 (semua kandidat ke LLM) dan Jalur Hemat/v2 (top 5, maks 4 bukti relevan) untuk uji efisiensi pada eval set yang sama, dan dari pemakaian nyata di Neraca Token | Wajib |
 | AI-8 | Data mahasiswa dibungkus sebagai data di prompt; instruksi di dalamnya diabaikan | Wajib |
 | AI-9 | Mode mock untuk pengembangan UI dan unit test tanpa memakai token; demo dan eval memakai API asli | Sebaiknya |
 | AI-10 | Error API (401, 429, timeout) tampil sebagai langkah gagal dengan pesan yang bisa dipahami user | Wajib |
@@ -229,6 +248,7 @@ Prototipe berjalan di localhost dengan data sintetis, tetapi aturan akses dan pr
 | NFR-8 | Transparansi | Komponen simulasi dan data sintetis berlabel di UI dan README |
 | NFR-9 | Keamanan login | Kata sandi disimpan sebagai hash scrypt bergaram (bawaan Node, tanpa dependensi baru); token sesi 32 byte acak, di database hanya disimpan SHA-256-nya; cookie `tl_session` httpOnly, SameSite=Lax, Secure saat HTTPS; sesi berlaku 8 jam; logout mencabut sesi di server; proxy hanya pengecekan cepat cookie, validasi sesi di server ke database |
 | NFR-10 | Ketahanan data akun | `npm run seed` tidak menghapus tabel `users` dan `sessions`, jadi akun dan sesi bertahan saat data mahasiswa diisi ulang |
+| NFR-11 | Kendali biaya | Rem anggaran dijalankan di server, bukan hanya di tampilan; laporan Neraca Token hanya membaca Token Ledger dan tidak mengubah ERD |
 
 **Data:**
 
@@ -247,14 +267,15 @@ Prototipe berjalan di localhost dengan data sintetis, tetapi aturan akses dan pr
 
 ## Kebutuhan UX dan layar
 
-Satu layar login dan tiga layar utama, masing-masing harus menunjukkan progres, error, dan langkah berikutnya, karena kriteria UI/UX menilai penyelesaian tugas, navigasi, kejelasan output, serta status progres dan error. Halaman Scorecard/Rapor ditunda.
+Satu layar login dan empat layar utama, masing-masing harus menunjukkan progres, error, dan langkah berikutnya, karena kriteria UI/UX menilai penyelesaian tugas, navigasi, kejelasan output, serta status progres dan error. Halaman Scorecard/Rapor ditunda; bukti hemat token tampil di Neraca Token.
 
 | Layar (menu) | Elemen wajib | Status kosong, progres, dan error |
 | --- | --- | --- |
 | Masuk (`/login`) | Kartu terbelah dua seperti inspirasi `design/inspiration/05-login-split.jpg`: panel biru berpola sirkuit berisi identitas produk dan tim Digital Worker; form "Selamat datang" dengan field email dan kata sandi (label menempel di garis atas, ikon, tombol tampilkan kata sandi), tombol Masuk, pemisah "atau pakai akun demo" dengan dua kartu akun demo; tanpa tombol Google atau media sosial | Field kosong atau email salah format: pesan di bawah field; kredensial salah: kotak merah "Email atau kata sandi salah."; saat memeriksa: tombol "Memeriksa…" dengan spinner; Caps Lock aktif: petunjuk di bawah kata sandi |
-| Tim Digital Worker (Tim) | Kartu pegawai Netra (ID pegawai, jabatan, penempatan, tingkat kemampuan, knowledge base, hak akses, token X / 10.000.000), "Menunggu keputusan Anda", riwayat penugasan, Jaya "Dalam pelatihan" | Belum ada penugasan: ajakan menugaskan Netra; budget ≥ 80%: banner kuning |
-| Tugaskan Netra (Tugaskan) | Salam Netra, textarea kebutuhan riset, 3 contoh brief yang bisa diklik, centang "mode pembanding" (v1); nama dan peran pengguna yang login tampil di bar atas beserta tombol Keluar | Brief < 15 karakter ditolak dengan pesan; tombol nonaktif saat mengirim |
+| Tim Digital Worker (Tim) | Kartu pegawai Netra (ID pegawai, jabatan, penempatan, tingkat kemampuan, knowledge base, hak akses, token X / 10.000.000), "Menunggu keputusan Anda", riwayat penugasan, Jaya "Dalam pelatihan" | Belum ada penugasan: ajakan menugaskan Netra; budget ≥ 80%: banner kuning, ≥ 95%: banner merah, keduanya dengan tautan Neraca Token |
+| Tugaskan Netra (Tugaskan) | Salam Netra, textarea kebutuhan riset, 3 contoh brief yang bisa diklik, pilihan jalur kerja (kartu Jalur Hemat dan Jalur Pembanding dengan perkiraan token dan sisa anggaran; Jaya selalu Jalur Hemat); nama dan peran pengguna yang login tampil di bar atas beserta tombol Keluar | Brief < 15 karakter ditolak dengan pesan; tombol nonaktif saat mengirim; anggaran ≥ 80%: kartu Jalur Pembanding "Dikunci"; ≥ 95%: kotak merah dan tombol nonaktif |
 | Detail penugasan | Jejak kerja Netra (langkah, status, durasi, token, model); Link Brief (kartu kandidat, skor atau "Tanpa skor; diurutkan AI" di v1, chip ID bukti, badge Hidden Talent dan Fair Exposure, "Belum ada bukti di data kampus", catatan AI, draf undangan, tombol "Setujui dan undang" dan "Tolak"); panel bukti | Langkah berjalan: spinner; klarifikasi: kotak jawab; gagal: pesan + tombol coba lagi; tanpa kandidat ≥ 50: kotak "tidak ada yang memenuhi" + kandidat terdekat; 0 kandidat: arahan "Ubah kebutuhan" |
+| Neraca Token (Neraca Token) | Kartu Anggaran token (terpakai, meteran dengan garis 80% dan 95%, sisa, perkiraan jumlah penugasan per jalur); Penghematan Jalur Hemat; token per penugasan (kartu setinggi kolom di sebelahnya), per worker, dan per langkah. Aturan anggaran tidak punya bagian sendiri; batasnya terlihat dari garis 80% dan 95% di meteran, banner, dan status Jalur Pembanding | Memuat: kerangka abu-abu; gagal: pesan + Coba lagi; belum ada penugasan: ajakan Tugaskan Netra; belum bisa dibandingkan: penjelasan + tombol; menipis atau berhenti: banner kuning atau merah |
 
 &#91;embedded content: status run · 7 status\]
 
@@ -263,7 +284,7 @@ Status run menentukan apa yang tampil di layar Detail run: kotak jawab saat menu
 **Prinsip tampilan:**
 
 - Bahasa Indonesia di seluruh UI; istilah teknis hanya di jejak kerja.
-- Bahasa bisnis mengikuti CBN Digital Worker: penugasan (bukan run), jejak kerja, penempatan, atasan, tingkat kemampuan, knowledge base, hak akses, dalam pelatihan.
+- Bahasa bisnis mengikuti CBN Digital Worker: penugasan (bukan run), jejak kerja, penempatan, atasan, tingkat kemampuan, knowledge base, hak akses, dalam pelatihan, Jalur Hemat dan Jalur Pembanding (bukan v2 dan v1), Neraca Token.
 - Setiap klaim AI punya chip bukti; tidak ada teks AI tanpa sumber.
 - Label SIMULASI berwarna kuning, label Sintetis abu-abu, selalu terlihat tanpa hover.
 - Alur demo bisa diselesaikan dalam 6 klik dari Beranda sampai undangan disetujui.
@@ -294,6 +315,11 @@ Rilis diterima jika 12 kasus eval lulus dan semua syarat minimum brief terpenuhi
 | AC-18 | Sudah login | Menekan Keluar, lalu memakai token lama | Token lama ditolak 401; halaman aplikasi dialihkan ke login | FR-A5, NFR-9 |
 | AC-19 | Login sebagai Bu Rina | Menyetujui kandidat | `decided_by` berisi "Bu Rina (Dosen peneliti)" | FR-A6 |
 | AC-20 | Parameter `next=//situs-lain.com` | Login atau membuka `/login` saat sudah masuk | Dialihkan ke `/`, bukan ke situs luar | FR-A3 |
+| AC-21 | Sudah login | Membuka menu Neraca Token | Tampil token terpakai, sisa, status, penghematan, dan rincian dari Token Ledger | FR-T1–T3 |
+| AC-22 | Ada penugasan Netra selesai di kedua jalur | Membuka Neraca Token | Persen lebih hemat = 1 − rata-rata Jalur Hemat ÷ rata-rata Jalur Pembanding; penugasan Jaya dan bertoken 0 tidak ikut | FR-T2 |
+| AC-23 | Pemakaian ≥ 80% | Menugaskan Netra lewat Jalur Pembanding (form atau API) | Kartu dikunci di form; API membalas 409 "Anggaran token sudah melewati batas peringatan, jadi Jalur Pembanding dikunci. Pilih Jalur Hemat."; Jalur Hemat dan Jaya tetap 201 | FR-T5, FR-T6 |
+| AC-24 | Pemakaian ≥ 95% | Menugaskan Netra atau Jaya, atau menekan Coba lagi | API membalas 409 "Anggaran token sudah mencapai batas berhenti. …"; tombol Tugaskan nonaktif | FR-T5, FR-T6 |
+| AC-25 | Belum login | Memanggil `GET /api/tokens` atau membuka `/tokens` | 401, atau dialihkan ke `/login?next=%2Ftokens` | FR-T7, FR-A2 |
 
 ## Risiko, asumsi, dan pertanyaan terbuka
 
@@ -303,7 +329,10 @@ Risiko terbesar adalah format API CBN yang belum dikonfirmasi; mitigasinya satu 
 | --- | --- | --- |
 | Lapisan HTTP API belum ada (temuan audit) | UI dan pipeline tidak tersambung; demo nyata mustahil | Route Handler tipis di atas fungsi yang ada; prioritas pertama backend; mockup tetap jadi cadangan demo |
 | Isi alasan AI tidak diverifikasi, hanya ID bukti | AI bisa menambah detail yang tidak ada di bukti | Setiap alasan wajib punya chip bukti yang bisa dibuka; dosen memeriksa sebelum menyetujui |
-| Halaman Scorecard ditunda | Bukti efisiensi token tidak terlihat di aplikasi | Tampilkan `eval/results.md` di README dan slide |
+| Halaman Scorecard ditunda | Bukti efisiensi token tidak terlihat di aplikasi | Neraca Token menampilkan penghematan Jalur Hemat dari pemakaian nyata; tabel eval tetap di README dan slide |
+| Rem anggaran mengubah perilaku `POST /api/runs` dan coba lagi (409) | Uji atau skrip yang memakai mode v1 gagal saat pemakaian tinggi | Pesan 409 jelas; batas dari `.env`; uji memakai database sementara |
+| `LLM_MOCK` dan mode mock frontend tidak bisa mencapai batas 80% atau 95% | Status Menipis dan Berhenti tidak bisa didemokan tanpa API asli | Rem anggaran diuji unit test dan uji browser dengan database sementara; untuk demo pakai API asli dengan `TOKEN_BUDGET_TOTAL` kecil |
+| Rata-rata per jalur dari sedikit penugasan | Persen hemat berubah-ubah di awal demo | Jalankan brief yang sama di kedua jalur sebelum demo; angka eval resmi tetap dari skrip |
 | Kata sandi akun demo tertulis di halaman login dan dokumen | Siapa pun bisa masuk ke prototipe | Hanya data sintetis di localhost; di produksi akun demo dihapus dan akun dibuat admin kampus |
 | Belum ada pembatasan percobaan login | Tebak kata sandi berulang tidak dihambat | Kata sandi di-hash scrypt (lambat ditebak); rate limit per email masuk roadmap |
 | Semua endpoint kini wajib login | Uji `curl` ke API tanpa cookie gagal 401 | Login dulu dengan `curl -c cookie.txt`, lalu kirim `-b cookie.txt` (contoh di `docs/api.md`) |
@@ -329,6 +358,7 @@ Risiko terbesar adalah format API CBN yang belum dikonfirmasi; mitigasinya satu 
 - [ ] Ada dashboard pemakaian token resmi untuk dicocokkan dengan Token Ledger?
 - [ ] Konfirmasi batas submission ke panitia
 - [ ] Perlu pembatasan akses per peran (FR-A8) untuk demo, atau cukup login saja?
+- [ ] Perlu anggaran token terpisah per unit (LPPM dan Bagian Kemahasiswaan), atau cukup satu alokasi bersama (FR-T8)?
 - [ ] Validasi masalah ke dosen PENS dan minta satu topik riset nyata untuk demo
 
 ## Skill dan aturan untuk AI coding assistant
@@ -372,6 +402,7 @@ Dengan `--agent claude-code` skill terpasang di `.claude/skills/` proyek. Untuk 
 - Indeks pada `evidence(student_id)`, `evidence_skills(skill_id)`, `run_steps(run_id)`, `token_ledger(run_id)`.
 - Validasi Zod di setiap endpoint dan setiap output LLM.
 - Setiap Route Handler baru memakai `handle()` dari `lib/http.ts` (otomatis wajib login dan menerima pengguna yang login); `handlePublic()` hanya untuk login dan logout.
+- Penugasan baru dan coba lagi melewati `assertBudget()` di `lib/service.ts` (rem anggaran); laporan token hanya lewat `lib/tokens.ts`.
 - Katalog skill dan hasil parse guidebook di-cache di memori.
 - Pipeline berjalan di background; endpoint langsung mengembalikan run\_id; timeout 30 detik per langkah.
 - Tanpa abstraksi yang belum dibutuhkan; fungsi kecil dengan tipe jelas.
@@ -633,6 +664,7 @@ Rilis dibagi dalam empat checkpoint; setiap checkpoint menentukan apakah cakupan
 - `docs/perubahan-cakupan-netra-jaya.md`: dampak revisi ini ke frontend dan backend
 - `docs/bisnis-dan-alur-kerja.md`: model bisnis dan alur kerja per pengguna
 - `docs/fitur-login.md`: rancangan login dan logout, dampak ke backend dan ERD
+- `docs/fitur-neraca-token.md`: rancangan Neraca Token dan Jalur Hemat, aturan anggaran, dampak ke backend (ERD tidak berubah)
 
 ## Riwayat perubahan
 
@@ -643,3 +675,4 @@ Rilis dibagi dalam empat checkpoint; setiap checkpoint menentukan apakah cakupan
 | 9 Okt 2026, malam | Ditambah bagian Status implementasi, FR-W10 (lapisan HTTP API), FR-R13 dan US-15 (belum ada bukti vs tidak menguasai), catatan audit di FR-R10, AI-2, AC-08, AC-10, AC-12, serta risiko baru | Temuan audit integrasi frontend–backend |
 | 9 Okt 2026, malam | Layar disesuaikan dengan mockup: istilah CBN Digital Worker, form Tugaskan satu kartu, "Setujui dan undang" satu klik, peran di bar atas | Penyederhanaan alur dan bahasa bisnis CBN |
 | 10 Okt 2026, dini hari | Ditambah fitur login dan logout email + kata sandi: US-16, US-17, FR-A1–A8, NFR-9, NFR-10, AC-15–AC-20, layar Masuk, akun demo, tabel `users` dan `sessions`, risiko baru. Login dikeluarkan dari daftar "Tidak masuk rilis" | Permintaan tim; keputusan persetujuan perlu tercatat atas nama orang yang login |
+| 10 Okt 2026 | Ditambah Neraca Token dan Jalur Hemat: US-18, US-19, FR-T1–T8, NFR-11, AC-21–AC-25, layar Neraca Token, pilihan jalur di form Tugaskan (menggantikan centang "mode pembanding"), rem anggaran 409 di server, risiko baru. FR-R1, AI-6, AI-7, dan metrik Hemat token diperbarui. ERD tidak berubah | Permintaan tim; kriteria AI token efficiency perlu terlihat di aplikasi setelah halaman Rapor ditunda |

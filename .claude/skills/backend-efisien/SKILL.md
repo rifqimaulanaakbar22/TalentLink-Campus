@@ -24,6 +24,8 @@ description: Aturan backend TalentLink Campus. Pakai setiap kali mengubah lib/, 
 ## API
 - Validasi Zod di setiap endpoint; balas error dengan pesan Bahasa Indonesia.
 - Setiap Route Handler memakai `handle((user) => …)` dari `lib/http.ts`: wajib login otomatis (401 tanpa sesi) dan `user` tersedia untuk jejak audit. `handlePublic()` hanya untuk login dan logout.
+- Endpoint yang memulai pekerjaan LLM (buat penugasan, coba lagi) memanggil `assertBudget()` di `lib/service.ts`: 409 untuk Jalur Pembanding mulai batas peringatan, 409 untuk semua mulai batas berhenti.
+- Laporan pemakaian token hanya lewat `lib/tokens.ts` (membaca `token_ledger`); jangan menulis query token di Route Handler.
 - Jangan menyimpan kata sandi atau token sesi mentah. Pakai `hashPassword()` dan sesi di `lib/auth.ts`; jangan log email, kata sandi, atau token.
 - Pipeline berjalan di background (`after()` dari `next/server`); endpoint langsung mengembalikan `run_id`.
 - Timeout 30 detik per langkah. Langkah gagal tidak menghapus langkah yang sudah selesai.
@@ -32,5 +34,5 @@ description: Aturan backend TalentLink Campus. Pakai setiap kali mengubah lib/, 
 ## Kode
 - Tanpa abstraksi yang belum dibutuhkan; fungsi kecil dengan tipe jelas di `lib/types.ts`.
 - Log berisi langkah, status, dan token. Tidak pernah API key atau isi data pribadi.
-- Test dulu untuk logika inti (`score.ts`, `verify.ts`, `check_eligibility`, `lib/auth.ts`).
+- Test dulu untuk logika inti (`score.ts`, `verify.ts`, `check_eligibility`, `lib/auth.ts`, `lib/tokens.ts`).
 - `npm run lint && npm test` harus lulus sebelum menyarankan commit.

@@ -12,6 +12,7 @@ import type {
   RunListResponse,
   RunStatus,
   SendResponse,
+  TokenReport,
   WorkerResponse,
 } from "./types";
 
@@ -81,4 +82,5 @@ export const api = {
       : request<{ runId: number; status: RunStatus }>(`/api/runs/${id}/retry`, post()),
   getEvidence: (id: string) =>
     USE_MOCK ? mock(() => mockApi.getEvidence(id), 200) : request<EvidenceDetail>(`/api/evidence/${id}`),
+  getTokenReport: () => (USE_MOCK ? mock(() => mockApi.getTokenReport()) : request<TokenReport>("/api/tokens")),
 };

@@ -63,13 +63,14 @@ curl -X POST $B/api/runs/1/send
 | `GET /api/auth/me` | 200 `{user}` | 401 |
 | Semua endpoint lain tanpa sesi | | 401 `Sesi Anda berakhir. Silakan masuk lagi.` |
 | `GET /api/worker` | 200 `{workers:[{id:"netra",status:"siap",tokensUsed:0,...}], usage:{total,budget:10000000,percent,warn,stop,byWorker}}` | |
-| `POST /api/runs` `{workerId, brief, mode}` | 201 `{runId}` | 400 `Brief terlalu pendek, minimal 15 karakter.` · 400 `Digital Worker ini segera hadir dan belum bisa diberi tugas.` · 400 `Body permintaan harus berupa JSON yang valid.` |
+| `POST /api/runs` `{workerId, brief, mode}` | 201 `{runId}` | 400 `Brief terlalu pendek, minimal 15 karakter.` · 400 `Digital Worker ini segera hadir dan belum bisa diberi tugas.` · 400 `Body permintaan harus berupa JSON yang valid.` · 409 `Anggaran token sudah melewati batas peringatan, jadi Jalur Pembanding dikunci. Pilih Jalur Hemat.` · 409 `Anggaran token sudah mencapai batas berhenti. Penugasan baru ditahan sampai alokasi token ditambah.` |
 | `GET /api/runs` | 200 `{runs:[{id,workerId,briefPreview,mode,status,createdAt,totalTokens,errorMessage}]}`, 20 terbaru | |
 | `GET /api/runs/:id` | 200 `RunDetailResponse` | 404 `Penugasan tidak ditemukan.` · 400 `ID penugasan tidak valid.` |
 | `POST /api/runs/:id/clarify` `{answer}` | 200 `{runId, status:"queued"}` | 409 `Penugasan ini tidak sedang menunggu klarifikasi.` |
 | `POST /api/runs/:id/approve` `{decision, candidateCodes, messageDraft}` | 200 `ApprovalView` | 409 `Penugasan ini tidak sedang menunggu persetujuan.` · 400 `Kandidat S-108 tidak ada di Link Brief penugasan ini.` · 400 `Pilih minimal satu kandidat untuk disetujui.` |
 | `POST /api/runs/:id/send` | 200 `{sentAt, label:"SIMULASI"}` | 403 `Butuh persetujuan dosen` (belum disetujui atau ditolak) |
-| `POST /api/runs/:id/retry` | 200 `{runId, status:"queued"}` | 409 `Hanya penugasan yang gagal yang bisa dicoba lagi.` |
+| `POST /api/runs/:id/retry` | 200 `{runId, status:"queued"}` | 409 `Hanya penugasan yang gagal yang bisa dicoba lagi.` · 409 rem anggaran (pesan sama dengan `POST /api/runs`) |
+| `GET /api/tokens` | 200 `{usage, warnAt, stopAt, remaining, comparisonLocked, byMode:{v1,v2}, savings, byStep, calls, estimatedCalls, unassigned}` (Neraca Token) | 401 |
 | `GET /api/evidence/:id` | 200 `{id:"EV-449",type:"project",title,detail,grade,year,sourceLabel:"Sintetis",studentCode:"S-101",skills:[...]}` | 404 `Bukti tidak ditemukan.` · 400 `ID bukti tidak valid.` |
 | `GET /api/scorecard` | 200 `{empty:true,hint:"Jalankan npm run eval"}` atau isi `eval/results.json` | |
 
@@ -79,6 +80,7 @@ curl -X POST $B/api/runs/1/send
 - **Retry:** baris langkah lama tetap ada. Frontend menampilkan baris terakhir per nama langkah. Parse dilewati jika kriteria sudah tersimpan.
 - **Token per langkah:** dari `token_ledger`, dicocokkan dengan nama langkah dan rentang waktunya. Retry explain tercatat di langkah `verify`.
 - **Error API CBN** (401, 429, timeout, budget habis) muncul sebagai langkah `failed` dan `run.errorMessage`, misalnya `Batas permintaan API CBN tercapai, coba lagi sebentar`.
+- **Rem anggaran (Neraca Token):** mulai batas peringatan (bawaan 80%) Netra dengan `mode: "v1"` (Jalur Pembanding) ditolak 409; mulai batas berhenti (bawaan 95%) semua penugasan baru dan coba lagi ditolak 409. Jaya selalu `v2`. Dengan `LLM_MOCK=true` semua panggilan tercatat 0 token, jadi rem tidak aktif. Rincian di `docs/fitur-neraca-token.md`.
 - **Skenario uji mock:** `LLM_MOCK_SCENARIO=fake_ids` (ID bukti palsu → alasan template) dan `LLM_MOCK_SCENARIO=bad_json` (JSON rusak → alasan template).
 
 ## Jaya (Competition Matching)

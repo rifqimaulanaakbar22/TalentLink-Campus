@@ -129,3 +129,32 @@ export type ScorecardResponse =
       v2: ScorecardModeSummary;
       cases: { id: string; title: string; mode: RunMode; pass: boolean; note: string }[];
     };
+
+// ---------- Tambahan: Neraca Token dan Jalur Hemat (aditif, 10 Oktober 2026) ----------
+
+/** Ringkasan satu jalur kerja. Hanya penugasan Netra yang sudah menghasilkan Link Brief. */
+export interface TokenModeStats {
+  runs: number;           // jumlah penugasan
+  tokens: number;         // total token penugasan itu
+  avgPerRun: number;      // dibulatkan; 0 jika runs = 0
+}
+
+export interface TokenStepStats {
+  step: StepName;
+  calls: number;          // jumlah panggilan LLM
+  tokens: number;
+}
+
+export interface TokenReport {
+  usage: TokenUsageView;
+  warnAt: number;            // token; mulai di sini Jalur Pembanding dikunci
+  stopAt: number;            // token; mulai di sini penugasan baru ditolak dan LLM berhenti
+  remaining: number;         // stopAt - total, minimal 0
+  comparisonLocked: boolean; // sama dengan usage.warn
+  byMode: Record<RunMode, TokenModeStats>; // v2 = Jalur Hemat, v1 = Jalur Pembanding
+  savings: { percent: number; tokens: number } | null; // null jika salah satu jalur belum punya data
+  byStep: TokenStepStats[];  // urut token terbesar
+  calls: number;             // semua panggilan LLM di token_ledger
+  estimatedCalls: number;    // panggilan yang tokennya perkiraan (gateway tidak mengirim usage)
+  unassigned: number;        // token tanpa penugasan (penugasan terhapus saat seed ulang, skrip)
+}

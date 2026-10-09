@@ -38,7 +38,8 @@ const TIMEOUT_MS = 30_000;
 
 export const isMock = () => process.env.LLM_MOCK === "true";
 
-function budgetConfig() {
+/** Anggaran token dan dua batasnya (token absolut). Dipakai juga oleh Neraca Token (lib/tokens.ts). */
+export function budgetConfig() {
   const total = Number(process.env.TOKEN_BUDGET_TOTAL) || 10_000_000;
   // Nilai <= 1 dibaca sebagai fraksi dari total, selain itu angka token absolut.
   const level = (v: string | undefined, def: number) => {

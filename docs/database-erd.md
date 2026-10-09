@@ -115,7 +115,7 @@ erDiagram
 | Kelompok | Tabel | Sifat |
 | --- | --- | --- |
 | Talent Graph | `students`, `skills`, `evidence`, `evidence_skills` | Hanya diisi oleh seed. Worker dan API **read-only** |
-| Jejak run | `runs`, `run_steps`, `token_ledger`, `approvals` | Ditulis oleh pipeline dan API; membuat hasil tetap ada setelah refresh |
+| Jejak run | `runs`, `run_steps`, `token_ledger`, `approvals` | Ditulis oleh pipeline dan API; membuat hasil tetap ada setelah refresh. Halaman Neraca Token (`lib/tokens.ts`) hanya **membaca** `token_ledger` JOIN `runs`; fitur itu tidak menambah tabel atau kolom |
 | Autentikasi | `users`, `sessions` | Ditulis oleh `lib/auth.ts` saat login dan logout. **Tidak disentuh seed**, jadi akun dan sesi bertahan saat `npm run seed`. Akun demo dibuat otomatis saat login pertama |
 
 `evidence_skills` adalah sisi graph: satu bukti bisa membuktikan beberapa skill dengan kekuatan berbeda. Skor kandidat dihitung dari sini (`strength/3 × w_type × w_recency`, ambil yang terbaik per skill).

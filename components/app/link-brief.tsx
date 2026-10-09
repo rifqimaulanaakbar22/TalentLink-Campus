@@ -300,7 +300,7 @@ export function LinkBrief({
           {competition
             ? `Syarat diperiksa dan tim disusun di kode dari bukti, bukan oleh AI. Tim berisi ${competition.teamSize} orang dengan peran berbeda. Klik ID bukti untuk melihat sumbernya.`
             : result.mode === "v1"
-              ? "Mode pembanding: urutan kandidat dibuat AI tanpa skor, hanya untuk mengukur biaya token."
+              ? "Jalur Pembanding: urutan kandidat dibuat AI tanpa skor, untuk mengukur selisih token dengan Jalur Hemat."
               : "Skor dihitung di kode dari bukti, bukan oleh AI. Klik ID bukti untuk melihat sumbernya."}{" "}
           Rekomendasi ini bahan pertimbangan; keputusan tetap di tangan Anda.
         </p>

@@ -18,6 +18,9 @@ import type {
   SendResponse,
   StepName,
   StepView,
+  TokenModeStats,
+  TokenReport,
+  TokenUsageView,
   WorkerId,
   WorkerResponse,
 } from "./types";
@@ -38,6 +41,12 @@ interface MockRun {
 
 const STORAGE_KEY = "talentlink-mock-runs-v2";
 const BUDGET = 10_000_000;
+// Sama dengan default TOKEN_BUDGET_WARN dan TOKEN_BUDGET_STOP di .env.example.
+const WARN_AT = BUDGET * 0.8;
+const STOP_AT = BUDGET * 0.95;
+// Pesan sama dengan MSG.budgetStop dan MSG.comparisonLocked di lib/service.ts.
+const BUDGET_STOP = "Anggaran token sudah mencapai batas berhenti. Penugasan baru ditahan sampai alokasi token ditambah.";
+const COMPARISON_LOCKED = "Anggaran token sudah melewati batas peringatan, jadi Jalur Pembanding dikunci. Pilih Jalur Hemat.";
 const QUEUE_MS = 400;
 const DECIDED_BY = "Dosen peneliti (SIMULASI)";
 const MODEL_PARSE = "qwen3.8-flash";
@@ -104,6 +113,31 @@ function save() {
   } catch {
     // abaikan; data tetap ada di memori selama tab terbuka
   }
+}
+
+/** Skala sama dengan getTokenUsage() di lib/llm.ts: persen 0–100, satu angka desimal. */
+function usageView(netraTokens: number): TokenUsageView {
+  const total = netraTokens;
+  return {
+    total,
+    budget: BUDGET,
+    percent: Math.round((total / BUDGET) * 1000) / 10,
+    warn: total >= WARN_AT,
+    stop: total >= STOP_AT,
+    byWorker: { netra: netraTokens, jaya: 0, kanca: 0 },
+  };
+}
+
+function currentUsage(): TokenUsageView {
+  const now = Date.now();
+  return usageView(load().reduce((s, r) => s + derive(r, now).totalTokens, 0));
+}
+
+/** Rem anggaran, sama dengan assertBudget() di lib/service.ts. */
+function assertBudget(workerId: WorkerId, mode: RunMode) {
+  const usage = currentUsage();
+  if (usage.stop) throw new ApiRequestError(BUDGET_STOP, 409);
+  if (usage.warn && mode === "v1" && workerId !== "jaya") throw new ApiRequestError(COMPARISON_LOCKED, 409);
 }
 
 function find(id: number): MockRun {
@@ -303,11 +337,54 @@ export const mockApi = {
         ? { ...w, status: active ? ("bekerja" as const) : ("siap" as const), activeRunId: active?.run.id ?? null, tokensUsed: netraTokens }
         : w,
     );
-    // Skala sama dengan getTokenUsage() di lib/llm.ts: persen 0–100, satu angka desimal.
-    const percent = Math.round((netraTokens / BUDGET) * 1000) / 10;
+    return { workers, usage: usageView(netraTokens) };
+  },
+
+  /** Meniru getTokenReport() di lib/tokens.ts dari penugasan mock. */
+  getTokenReport(): TokenReport {
+    const now = Date.now();
+    const details = load().map((r) => derive(r, now));
+    const usage = usageView(details.reduce((s, d) => s + d.totalTokens, 0));
+
+    const byMode: Record<RunMode, TokenModeStats> = { v1: { runs: 0, tokens: 0, avgPerRun: 0 }, v2: { runs: 0, tokens: 0, avgPerRun: 0 } };
+    const done: RunStatus[] = ["awaiting_approval", "approved", "rejected"];
+    for (const d of details) {
+      if (d.run.workerId !== "netra" || !done.includes(d.run.status) || d.totalTokens === 0) continue;
+      byMode[d.run.mode].runs += 1;
+      byMode[d.run.mode].tokens += d.totalTokens;
+    }
+    for (const m of Object.values(byMode)) m.avgPerRun = m.runs ? Math.round(m.tokens / m.runs) : 0;
+    const { v1, v2 } = byMode;
+    // Rumus sama dengan computeSavings() di lib/tokens.ts.
+    const savings =
+      v1.runs && v2.runs && v1.tokens > 0
+        ? {
+            percent: Math.round((1 - v2.tokens / v2.runs / (v1.tokens / v1.runs)) * 1000) / 10,
+            tokens: Math.round(v2.runs * (v1.tokens / v1.runs - v2.tokens / v2.runs)),
+          }
+        : null;
+
+    const steps = new Map<StepName, { calls: number; tokens: number }>();
+    for (const s of details.flatMap((d) => d.steps)) {
+      const tokens = s.inputTokens + s.outputTokens;
+      if (!s.model || tokens === 0) continue;
+      const row = steps.get(s.step) ?? { calls: 0, tokens: 0 };
+      steps.set(s.step, { calls: row.calls + 1, tokens: row.tokens + tokens });
+    }
+    const byStep = [...steps].map(([step, v]) => ({ step, ...v })).sort((a, b) => b.tokens - a.tokens);
+
     return {
-      workers,
-      usage: { total: netraTokens, budget: BUDGET, percent, warn: percent >= 80, stop: percent >= 95, byWorker: { netra: netraTokens, jaya: 0, kanca: 0 } },
+      usage,
+      warnAt: WARN_AT,
+      stopAt: STOP_AT,
+      remaining: Math.max(0, STOP_AT - usage.total),
+      comparisonLocked: usage.warn,
+      byMode,
+      savings,
+      byStep,
+      calls: byStep.reduce((n, s) => n + s.calls, 0),
+      estimatedCalls: 0,
+      unassigned: 0,
     };
   },
 
@@ -340,6 +417,7 @@ export const mockApi = {
     const brief = body.brief.trim();
     if (brief.length < 15) throw new ApiRequestError("Brief terlalu pendek. Tulis minimal 15 karakter.", 400);
     if (body.workerId !== "netra") throw new ApiRequestError("Worker ini masih dalam pelatihan dan belum bisa menerima tugas.", 400);
+    assertBudget(body.workerId, body.mode);
     const runs = load();
     const now = Date.now();
     const id = Math.max(0, ...runs.map((r) => r.id)) + 1;
@@ -373,6 +451,7 @@ export const mockApi = {
   retry(id: number) {
     const run = find(id);
     if (derive(run, Date.now()).run.status !== "failed") throw new ApiRequestError("Hanya penugasan yang gagal yang bisa dicoba lagi.", 409);
+    assertBudget(run.workerId, run.mode);
     run.failOnce = false;
     run.parseDoneAt = run.phaseStart;
     run.phaseStart = Date.now();

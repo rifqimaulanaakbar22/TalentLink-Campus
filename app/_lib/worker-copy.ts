@@ -64,8 +64,10 @@ export interface FormCopy {
   submit: string;
   submitting: string;
   eta: string;
-  /** Mode pembanding (v1) hanya untuk Netra. */
+  /** Pilihan Jalur Hemat atau Jalur Pembanding (v1) hanya untuk Netra. */
   allowCompare: boolean;
+  /** Alasan worker tanpa pilihan jalur selalu memakai Jalur Hemat. */
+  fixedPathReason?: string;
 }
 
 export function formCopy(id: WorkerId, researchExamples: string[]): FormCopy {
@@ -93,6 +95,7 @@ export function formCopy(id: WorkerId, researchExamples: string[]): FormCopy {
       submitting: "Menugaskan Jaya…",
       eta: "Usulan tim biasanya siap dalam kurang dari 30 detik.",
       allowCompare: false,
+      fixedPathReason: "Syarat peserta dan susunan tim dihitung di kode; AI hanya membaca guidebook dan menulis alasan.",
     };
   }
   return {

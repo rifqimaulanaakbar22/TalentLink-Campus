@@ -17,7 +17,7 @@ Setiap orang hanya mengubah folder miliknya. Jika butuh perubahan di folder oran
 
 | Folder atau file | Pemilik | Catatan |
 | --- | --- | --- |
-| `app/page.tsx`, `app/tasks/`, `app/runs/`, `app/login/` | Rifqi | Halaman |
+| `app/page.tsx`, `app/tasks/`, `app/runs/`, `app/login/`, `app/tokens/` | Rifqi | Halaman |
 | `app/layout.tsx`, `app/globals.css` | Rifqi | Layout dan Tailwind tokens |
 | `app/_lib/` | Rifqi | Klien fetch, fixture mock, helper UI |
 | `components/`, `design/`, `public/mascots/` | Rifqi | |
@@ -26,6 +26,7 @@ Setiap orang hanya mengubah folder miliknya. Jika butuh perubahan di folder oran
 | `lib/` (termasuk `lib/types.ts`, `lib/api-types.ts`) | Rofiq | Rifqi hanya boleh `import type` dari sini |
 | `scripts/`, `drizzle.config.ts` | Rofiq | |
 | `proxy.ts`, `lib/auth.ts`, `lib/auth-types.ts`, `lib/session.ts`, `app/api/auth/` | Rofiq (dibuat Rifqi di branch `feat/auth-login`) | Fitur login. Rifqi boleh `import type` dari `lib/auth-types.ts` |
+| `lib/tokens.ts`, `lib/tokens.test.ts`, `app/api/tokens/` | Rofiq (dibuat Rifqi di branch `feat/token-management`) | Neraca Token. Rifqi hanya `import type` dari `lib/api-types.ts` |
 | `.claude/skills/backend-efisien/` | Rofiq | |
 | `eval/`, `tests/e2e/`, `README.md`, `tech.md` | Reyhan | |
 | `docs/` | Siapa saja, satu berkas satu pemilik | Berkas ini milik bersama; ubah lewat kesepakatan |
@@ -201,13 +202,13 @@ export type ScorecardResponse =
 | Method | Path | Body | Sukses | Error |
 | --- | --- | --- | --- | --- |
 | GET | `/api/worker` | | 200 `WorkerResponse` | |
-| POST | `/api/runs` | `CreateRunBody` | 201 `CreateRunResponse` | 400 brief < 15 karakter; 400 worker belum tersedia |
+| POST | `/api/runs` | `CreateRunBody` | 201 `CreateRunResponse` | 400 brief < 15 karakter; 400 worker belum tersedia; 409 rem anggaran (lihat Tambahan: Neraca Token) |
 | GET | `/api/runs` | | 200 `RunListResponse`, 20 terbaru | |
 | GET | `/api/runs/:id` | | 200 `RunDetailResponse` | 404 |
 | POST | `/api/runs/:id/clarify` | `ClarifyBody` | 200 `{ runId, status: "queued" }` | 409 jika status bukan `needs_clarification` |
 | POST | `/api/runs/:id/approve` | `ApproveBody` | 200 `ApprovalView` | 409 jika status bukan `awaiting_approval` |
 | POST | `/api/runs/:id/send` | | 200 `SendResponse` | 403 `{ "error": "Butuh persetujuan dosen" }` |
-| POST | `/api/runs/:id/retry` | | 200 `{ runId, status: "queued" }` | 409 jika status bukan `failed` |
+| POST | `/api/runs/:id/retry` | | 200 `{ runId, status: "queued" }` | 409 jika status bukan `failed`; 409 rem anggaran |
 | GET | `/api/evidence/:id` | | 200 `EvidenceDetail` | 404 |
 | GET | `/api/scorecard` | | 200 `ScorecardResponse` | |
 
@@ -312,6 +313,47 @@ Aturan untuk backend:
 - `handlePublic()` hanya untuk login dan logout.
 - `POST /api/runs/:id/approve` kini mengisi `decidedBy` dengan `"<nama> (<peran>)"`, misalnya `"Bu Rina (Dosen peneliti)"`. Bentuk `ApprovalView` tidak berubah.
 - Uji `curl` perlu cookie: login dengan `-c cookie.txt`, lalu kirim `-b cookie.txt`. Contoh di `docs/api.md`.
+
+### Tambahan: Neraca Token dan Jalur Hemat (aditif, 10 Oktober 2026)
+
+Rincian dan alasan: `docs/fitur-neraca-token.md`. **ERD tidak berubah.** Di UI, `mode: "v2"` ditulis **Jalur Hemat** dan `mode: "v1"` ditulis **Jalur Pembanding**; API dan database tetap memakai `v1`/`v2`.
+
+Tipe baru di akhir `lib/api-types.ts`:
+
+```ts
+export interface TokenModeStats { runs: number; tokens: number; avgPerRun: number }
+export interface TokenStepStats { step: StepName; calls: number; tokens: number }
+export interface TokenReport {
+  usage: TokenUsageView;
+  warnAt: number;            // token; mulai di sini Jalur Pembanding dikunci
+  stopAt: number;            // token; mulai di sini penugasan baru ditolak
+  remaining: number;         // stopAt - total, minimal 0
+  comparisonLocked: boolean; // sama dengan usage.warn
+  byMode: Record<RunMode, TokenModeStats>; // hanya penugasan Netra selesai, token > 0
+  savings: { percent: number; tokens: number } | null;
+  byStep: TokenStepStats[];  // urut token terbesar
+  calls: number;
+  estimatedCalls: number;
+  unassigned: number;        // token tanpa penugasan
+}
+```
+
+| Method | Path | Body | Sukses | Error |
+| --- | --- | --- | --- | --- |
+| GET | `/api/tokens` | | 200 `TokenReport` | 401 |
+
+Rem anggaran (`assertBudget()` di `lib/service.ts`), berlaku untuk `POST /api/runs` dan `POST /api/runs/:id/retry`, **setelah** validasi body dan status:
+
+| Kondisi | Balasan |
+| --- | --- |
+| Pemakaian ≥ batas berhenti (`TOKEN_BUDGET_STOP`, bawaan 95%) | 409 `Anggaran token sudah mencapai batas berhenti. Penugasan baru ditahan sampai alokasi token ditambah.` |
+| Pemakaian ≥ batas peringatan (`TOKEN_BUDGET_WARN`, bawaan 80%), `mode: "v1"`, worker bukan Jaya | 409 `Anggaran token sudah melewati batas peringatan, jadi Jalur Pembanding dikunci. Pilih Jalur Hemat.` |
+
+Aturan untuk backend:
+
+- Endpoint baru yang memulai pekerjaan LLM memanggil `assertBudget()` sebelum membuat atau mengantrekan penugasan.
+- Laporan token hanya dibaca lewat `lib/tokens.ts`; pencatatan tetap satu pintu di `callLLM`.
+- Mode mock frontend meniru aturan dan pesan yang sama di `app/_lib/mock-store.ts`. Jika pesan di `MSG` berubah, ubah juga di sana.
 
 ## 5. Mock untuk frontend
 
