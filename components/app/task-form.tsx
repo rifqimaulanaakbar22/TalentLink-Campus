@@ -11,20 +11,16 @@ import { ErrorState } from "@/components/ui/states";
 import { api, USE_MOCK } from "@/app/_lib/api";
 import { mockWorkerBase } from "@/app/_lib/fixtures";
 import { EXAMPLE_BRIEFS } from "@/app/_lib/mock-data";
+import type { WorkerId } from "@/app/_lib/types";
+import { formCopy } from "@/app/_lib/worker-copy";
 import { Mascot } from "./mascot";
 
 const MIN_BRIEF = 15;
-const netra = mockWorkerBase.find((w) => w.id === "netra")!;
 
-const STEPS = [
-  "Memahami kebutuhan Anda, dan bertanya balik jika belum jelas.",
-  "Menelusuri nilai, proyek, dan pengalaman asisten mahasiswa aktif.",
-  "Menghitung skor di kode, bukan menebak dengan AI.",
-  "Menulis alasan yang masing-masing menunjuk bukti.",
-  "Menunggu persetujuan Anda sebelum mengundang mahasiswa.",
-];
-
-export function TaskForm() {
+/** Form penugasan yang sama untuk semua worker; hanya teks dan batasnya yang berbeda. */
+export function TaskForm({ workerId = "netra" }: { workerId?: WorkerId }) {
+  const worker = mockWorkerBase.find((w) => w.id === workerId) ?? mockWorkerBase[0];
+  const copy = formCopy(workerId, EXAMPLE_BRIEFS);
   const router = useRouter();
   const [brief, setBrief] = useState("");
   const [compare, setCompare] = useState(false);
@@ -36,14 +32,19 @@ export function TaskForm() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (length < MIN_BRIEF) {
-      setFieldError(`Tulis minimal ${MIN_BRIEF} karakter. Sebutkan topik riset atau skill yang dibutuhkan.`);
+      setFieldError(copy.minHint);
+      return;
+    }
+    if (length > copy.maxLength) {
+      setFieldError(`Teks terlalu panjang. Maksimal ${copy.maxLength.toLocaleString("id-ID")} karakter.`);
       return;
     }
     setFieldError(undefined);
     setSubmitError(null);
     setSubmitting(true);
     try {
-      const { runId } = await api.createRun({ workerId: "netra", brief: brief.trim(), mode: compare ? "v1" : "v2" });
+      const mode = copy.allowCompare && compare ? "v1" : "v2";
+      const { runId } = await api.createRun({ workerId, brief: brief.trim(), mode });
       router.push(`/runs/${runId}`);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Tugas belum terkirim. Coba lagi.");
@@ -55,48 +56,49 @@ export function TaskForm() {
     <form onSubmit={submit} className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12" noValidate>
       <Card className="min-w-0 lg:col-span-8">
         <div className="flex items-start gap-3">
-          <Mascot workerId="netra" size={48} />
+          <Mascot workerId={worker.id} size={48} />
           <div className="rounded-field rounded-tl-sm bg-panel px-4 py-3">
-            <p className="text-[15px] leading-5.5">{netra.salam}</p>
+            <p className="text-[15px] leading-5.5">{worker.salam}</p>
             <p className="mt-1 inline-flex items-center gap-1 text-xs text-ink-muted">
               <Bot aria-hidden className="size-3.5" />
-              Netra, {netra.jabatan}. Digital Worker (AI).
+              {worker.nama}, {worker.jabatan}. Digital Worker (AI).
             </p>
           </div>
         </div>
 
         <TextAreaField
-          label="Kebutuhan riset Anda"
+          label={copy.fieldLabel}
           className="mt-6"
-          rows={5}
+          rows={copy.rows}
           value={brief}
           onChange={(e) => {
             setBrief(e.target.value);
             if (fieldError) setFieldError(undefined);
           }}
-          placeholder="Contoh: Saya butuh 2 mahasiswa yang kuat Python dan Computer Vision untuk riset deteksi objek."
+          placeholder={copy.placeholder}
           error={fieldError}
-          hint="Sebutkan topik, skill, jumlah orang, dan semester minimum jika ada."
+          hint={copy.hint}
         />
 
-        <p className="mt-5 text-[13px] text-ink-muted">Belum tahu harus menulis apa? Pakai salah satu contoh:</p>
-        <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {EXAMPLE_BRIEFS.map((ex) => (
-            <li key={ex}>
+        <p className="mt-5 text-[13px] text-ink-muted">{copy.examplesIntro}</p>
+        <ul className={`mt-2 grid grid-cols-1 gap-2 ${copy.examples.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {copy.examples.map((ex) => (
+            <li key={ex.label}>
               <button
                 type="button"
                 onClick={() => {
-                  setBrief(ex);
+                  setBrief(ex.text);
                   setFieldError(undefined);
                 }}
                 className="h-full w-full rounded-field border border-line bg-surface p-3 text-left text-[13px] leading-4.5 text-ink-muted transition-colors hover:border-brand-300 hover:text-ink"
               >
-                {ex}
+                {ex.label}
               </button>
             </li>
           ))}
         </ul>
 
+        {copy.allowCompare && (
         <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-field bg-panel p-4">
           <input
             type="checkbox"
@@ -111,6 +113,7 @@ export function TaskForm() {
             </span>
           </span>
         </label>
+        )}
 
         {submitError && (
           <div className="mt-5">
@@ -125,17 +128,17 @@ export function TaskForm() {
             ) : (
               <Play aria-hidden className="size-5" />
             )}
-            {submitting ? "Menugaskan Netra…" : "Tugaskan Netra"}
+            {submitting ? copy.submitting : copy.submit}
           </Button>
-          <p className="text-[13px] text-ink-muted">Link Brief biasanya siap dalam kurang dari 30 detik.</p>
+          <p className="text-[13px] text-ink-muted">{copy.eta}</p>
         </div>
       </Card>
 
       <div className="min-w-0 space-y-5 lg:col-span-4">
         <Card variant="feature">
-          <h2 className="text-lg font-semibold">Cara Netra bekerja</h2>
+          <h2 className="text-lg font-semibold">Cara {worker.nama} bekerja</h2>
           <ol className="mt-4 space-y-3 text-[13px] leading-4.5">
-            {STEPS.map((text, i) => (
+            {copy.steps.map((text, i) => (
               <li key={text} className="flex gap-3">
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs">
                   {i + 1}
@@ -146,7 +149,7 @@ export function TaskForm() {
           </ol>
         </Card>
 
-        {USE_MOCK && (
+        {USE_MOCK && workerId === "netra" && (
           <Card>
             <h2 className="flex items-center gap-2 text-lg font-medium">
               Skenario demo <Badge tone="warning">Mode mock</Badge>

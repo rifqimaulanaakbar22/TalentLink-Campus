@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Check, CircleCheck, CircleX, Lock, SearchX, Send, Sparkles, TriangleAlert, Users } from "lucide-react";
+import { Bot, Check, CircleCheck, CircleX, ListChecks, Lock, SearchX, Send, Sparkles, TriangleAlert, Users } from "lucide-react";
 import { Badge, SimulasiBadge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { api } from "@/app/_lib/api";
 import { cn } from "@/app/_lib/cn";
 import type { RunDetailResponse, RunResult } from "@/app/_lib/types";
+import { workerName } from "@/app/_lib/worker-copy";
 import { Mascot } from "./mascot";
 
 type Candidate = RunResult["candidates"][number];
@@ -37,9 +38,11 @@ function CandidateCard({
   onToggle,
   activeEvidence,
   onOpenEvidence,
+  author,
 }: {
   candidate: Candidate;
   rank: number;
+  author: string;
   selected: boolean;
   selectable: boolean;
   onToggle: () => void;
@@ -63,6 +66,7 @@ function CandidateCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-mono text-lg font-semibold">{c.code}</p>
+            {c.role && <Badge tone="brand">{c.role}</Badge>}
             {c.hiddenTalent && (
               <Badge tone="hidden" icon={Sparkles}>
                 Hidden Talent
@@ -84,7 +88,7 @@ function CandidateCard({
           ) : (
             <>
               <p className="font-mono text-2xl leading-8 font-semibold">{formatScore(c.score)}</p>
-              <p className="text-xs text-ink-muted">skor dari 100</p>
+              <p className="text-xs text-ink-muted">{c.role ? "skor peran" : "skor dari 100"}</p>
               <ProgressBar value={c.score} label={`Skor ${c.code}`} className="mt-1.5 h-1.5" />
             </>
           )}
@@ -124,7 +128,7 @@ function CandidateCard({
       )}
       {aiNotes.length > 0 && (
         <p className="mt-3 text-[13px] leading-4.5 text-ink-muted">
-          <span className="font-medium text-ink">Catatan Netra (AI):</span> {aiNotes.join("; ")}.
+          <span className="font-medium text-ink">Catatan {author} (AI):</span> {aiNotes.join("; ")}.
         </p>
       )}
 
@@ -143,7 +147,61 @@ function CandidateCard({
   );
 }
 
-/** Link Brief: shortlist berbukti + Approval Gate (FR-R8–R11, FR-W6). */
+/** Syarat lomba, hasil Eligibility Check, dan Conflict Check (FR-C2, FR-C4, FR-C5). */
+function CompetitionPanel({ competition }: { competition: NonNullable<RunResult["competition"]> }) {
+  const c = competition;
+  return (
+    <Card>
+      <CardHeader
+        title="Syarat dan penyaringan"
+        description={`${c.eligibleCount} dari ${c.screenedCount} mahasiswa memenuhi syarat lomba. ${c.excluded.length} tersaring, masing-masing dengan alasan tertulis.`}
+      />
+      <ul className="flex flex-wrap gap-1.5">
+        {c.rules.map((r) => (
+          <li key={r}>
+            <Badge tone="neutral" icon={ListChecks}>
+              {r}
+            </Badge>
+          </li>
+        ))}
+      </ul>
+
+      {c.excluded.length > 0 && (
+        <details className="group mt-4 rounded-field bg-panel px-4 py-3">
+          <summary className="cursor-pointer text-[13px] font-medium">
+            Lihat {c.excluded.length} mahasiswa yang tersaring dan alasannya
+          </summary>
+          <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+            {c.excluded.map((e) => (
+              <li key={e.code} className="flex gap-3 text-[13px] leading-4.5">
+                <span className="w-14 shrink-0 font-mono font-medium">{e.code}</span>
+                <span className="text-ink-muted">{e.reasons.join("; ")}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {c.conflicts.length > 0 ? (
+        <ul className="mt-4 space-y-2">
+          {c.conflicts.map((k) => (
+            <li key={`${k.code}-${k.kind}`} className="flex gap-2.5 rounded-field bg-warning-bg px-4 py-2.5 text-[13px] leading-4.5 text-warning">
+              <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+              {k.message}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 flex items-center gap-2 text-[13px] text-success">
+          <CircleCheck aria-hidden className="size-4" />
+          Tidak ada konflik: tidak ada yang dobel tim atau bentrok dengan penugasan riset.
+        </p>
+      )}
+    </Card>
+  );
+}
+
+/** Link Brief: shortlist berbukti + Approval Gate (FR-R8–R11, FR-W6). Untuk Jaya berisi usulan tim. */
 export function LinkBrief({
   detail,
   activeEvidence,
@@ -160,10 +218,17 @@ export function LinkBrief({
   const approval = detail.approval;
   const awaiting = status === "awaiting_approval";
   const empty = result.candidates.length === 0;
+  const author = workerName(detail.run.workerId);
+  const competition = result.competition;
 
-  const [selected, setSelected] = useState<string[]>(
-    () => approval?.candidateCodes ?? (result.noMatch ? [] : result.candidates.slice(0, 2).map((c) => c.code)),
-  );
+  // Netra: dua kandidat teratas terpilih. Jaya: seluruh anggota tim pertama.
+  const defaultSelection = () =>
+    result.noMatch
+      ? []
+      : competition
+        ? result.candidates.filter((c) => c.team === 1).map((c) => c.code)
+        : result.candidates.slice(0, 2).map((c) => c.code);
+  const [selected, setSelected] = useState<string[]>(() => approval?.candidateCodes ?? defaultSelection());
   const [draft, setDraft] = useState(approval?.messageDraft ?? result.invitationDraft);
   const [busy, setBusy] = useState<null | "approve" | "reject" | "send">(null);
   const [error, setError] = useState<string | null>(null);
@@ -196,20 +261,24 @@ export function LinkBrief({
     <div className="space-y-5">
       <Card>
         <div className="flex items-start gap-4">
-          <Mascot workerId="netra" size={44} />
+          <Mascot workerId={detail.run.workerId} size={44} />
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
-              Disiapkan Netra
+              Disiapkan {author}
               <span className="inline-flex items-center gap-1 text-xs">
                 <Bot aria-hidden className="size-3.5" />
                 Digital Worker (AI)
               </span>
             </p>
-            <h2 className="text-xl leading-7 font-semibold">Link Brief: {result.topic}</h2>
+            <h2 className="text-xl leading-7 font-semibold">
+              {competition ? `Usulan tim: ${competition.competitionName}` : `Link Brief: ${result.topic}`}
+            </h2>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[13px]">
-          {result.requiredSkills.length > 0 && <span className="text-ink-muted">Skill wajib:</span>}
+          {result.requiredSkills.length > 0 && (
+            <span className="text-ink-muted">{competition ? "Skill peran:" : "Skill wajib:"}</span>
+          )}
           {result.requiredSkills.map((s) => (
             <Badge key={s} tone="brand">
               {s}
@@ -228,14 +297,33 @@ export function LinkBrief({
           ))}
         </div>
         <p className="mt-4 text-[13px] leading-4.5 text-ink-muted">
-          {result.mode === "v1"
-            ? "Mode pembanding: urutan kandidat dibuat AI tanpa skor, hanya untuk mengukur biaya token."
-            : "Skor dihitung di kode dari bukti, bukan oleh AI. Klik ID bukti untuk melihat sumbernya."}{" "}
+          {competition
+            ? `Syarat diperiksa dan tim disusun di kode dari bukti, bukan oleh AI. Tim berisi ${competition.teamSize} orang dengan peran berbeda. Klik ID bukti untuk melihat sumbernya.`
+            : result.mode === "v1"
+              ? "Mode pembanding: urutan kandidat dibuat AI tanpa skor, hanya untuk mengukur biaya token."
+              : "Skor dihitung di kode dari bukti, bukan oleh AI. Klik ID bukti untuk melihat sumbernya."}{" "}
           Rekomendasi ini bahan pertimbangan; keputusan tetap di tangan Anda.
         </p>
       </Card>
 
-      {result.noMatch && empty && (
+      {competition && <CompetitionPanel competition={competition} />}
+
+      {result.noMatch && empty && competition && (
+        <Card>
+          <EmptyState
+            icon={SearchX}
+            title="Belum ada tim yang bisa diusulkan"
+            description="Tidak ada mahasiswa yang lolos syarat sekaligus punya bukti untuk peran lomba ini. Coba longgarkan syarat atau sebut peran yang berbeda."
+            action={
+              <ButtonLink href="/tasks/new?worker=jaya" variant="secondary">
+                Ubah guidebook
+              </ButtonLink>
+            }
+          />
+        </Card>
+      )}
+
+      {result.noMatch && empty && !competition && (
         <Card>
           <EmptyState
             icon={SearchX}
@@ -273,22 +361,61 @@ export function LinkBrief({
         </p>
       )}
 
-      <section aria-label="Kandidat" hidden={empty}>
-        <ol className="space-y-4">
-          {result.candidates.map((c, i) => (
-            <CandidateCard
-              key={c.code}
-              candidate={c}
-              rank={i + 1}
-              selected={selected.includes(c.code)}
-              selectable={awaiting}
-              onToggle={() => toggle(c.code)}
-              activeEvidence={activeEvidence}
-              onOpenEvidence={onOpenEvidence}
-            />
-          ))}
-        </ol>
-      </section>
+      {competition ? (
+        competition.teams.map((t) => {
+          const members = result.candidates.filter((c) => c.team === t.team);
+          if (members.length === 0 && t.missingRoles.length === 0) return null;
+          return (
+            <section key={t.team} aria-labelledby={`tim-${t.team}`}>
+              <h3 id={`tim-${t.team}`} className="text-lg font-medium">
+                Tim {t.team}
+                <span className="ml-2 text-[13px] font-normal text-ink-muted">
+                  {members.length} dari {competition.teamSize} peran terisi
+                </span>
+              </h3>
+              {t.missingRoles.length > 0 && (
+                <p className="mt-2 flex gap-2 text-[13px] leading-4.5 text-warning">
+                  <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+                  Belum ada mahasiswa berbukti untuk peran {t.missingRoles.join(", ")}.
+                </p>
+              )}
+              <ol className="mt-3 space-y-4">
+                {members.map((c, i) => (
+                  <CandidateCard
+                    key={c.code}
+                    candidate={c}
+                    rank={i + 1}
+                    author={author}
+                    selected={selected.includes(c.code)}
+                    selectable={awaiting}
+                    onToggle={() => toggle(c.code)}
+                    activeEvidence={activeEvidence}
+                    onOpenEvidence={onOpenEvidence}
+                  />
+                ))}
+              </ol>
+            </section>
+          );
+        })
+      ) : (
+        <section aria-label="Kandidat" hidden={empty}>
+          <ol className="space-y-4">
+            {result.candidates.map((c, i) => (
+              <CandidateCard
+                key={c.code}
+                candidate={c}
+                rank={i + 1}
+                author={author}
+                selected={selected.includes(c.code)}
+                selectable={awaiting}
+                onToggle={() => toggle(c.code)}
+                activeEvidence={activeEvidence}
+                onOpenEvidence={onOpenEvidence}
+              />
+            ))}
+          </ol>
+        </section>
+      )}
 
       <Card>
         <CardHeader
@@ -332,7 +459,7 @@ export function LinkBrief({
               </Button>
               <Button variant="danger" onClick={() => act("reject")} disabled={busy !== null}>
                 <CircleX aria-hidden className="size-4" />
-                {busy === "reject" ? "Menyimpan…" : "Tolak shortlist"}
+                {busy === "reject" ? "Menyimpan…" : competition ? "Tolak usulan tim" : "Tolak shortlist"}
               </Button>
             </div>
             <p className="flex items-center gap-1.5 text-xs text-ink-muted">
@@ -383,11 +510,11 @@ export function LinkBrief({
             <div className="flex gap-3 rounded-field bg-panel px-4 py-3 text-ink-muted">
               <CircleX aria-hidden className="mt-0.5 size-5 shrink-0" />
               <p className="text-[13px] leading-4.5">
-                Shortlist ditolak{approval ? ` oleh ${approval.decidedBy}, ${formatTime(approval.decidedAt)}` : ""}. Tidak
+                {competition ? "Usulan tim" : "Shortlist"} ditolak{approval ? ` oleh ${approval.decidedBy}, ${formatTime(approval.decidedAt)}` : ""}. Tidak
                 ada undangan yang dikirim.
               </p>
             </div>
-            <ButtonLink href="/tasks/new" variant="secondary">
+            <ButtonLink href={`/tasks/new?worker=${detail.run.workerId}`} variant="secondary">
               Buat tugas baru
             </ButtonLink>
           </div>

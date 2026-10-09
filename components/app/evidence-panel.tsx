@@ -131,7 +131,7 @@ export function EvidencePanel({ evidenceId, onClose }: { evidenceId: string | nu
                 ))}
               </ul>
               <p className="mt-8 text-[13px] leading-4.5 text-ink-muted">
-                Netra memakai bukti ini sebagai dasar alasan. Data ini sintetis dan dibuat untuk prototipe.
+                Digital Worker memakai bukti ini sebagai dasar alasan. Data ini sintetis dan dibuat untuk prototipe.
               </p>
             </>
           )}

@@ -3,12 +3,13 @@ import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatNumber, formatRelative } from "@/app/_lib/format";
 import type { RunStatus, RunSummary } from "@/app/_lib/types";
+import { workerName } from "@/app/_lib/worker-copy";
 import { RunStatusBadge } from "./run-status-badge";
 
 /** Kalimat ajakan sesuai status, agar user tahu langkah berikutnya. */
 const NEXT_STEP: Partial<Record<RunStatus, string>> = {
-  awaiting_approval: "Tinjau Link Brief dan beri keputusan",
-  needs_clarification: "Jawab pertanyaan Netra agar tugas berlanjut",
+  awaiting_approval: "Tinjau hasilnya dan beri keputusan",
+  needs_clarification: "Jawab pertanyaan Digital Worker agar tugas berlanjut",
   failed: "Buka lalu coba lagi",
 };
 
@@ -25,7 +26,9 @@ export function RunList({ runs, showNextStep = false }: { runs: RunSummary[]; sh
             <div className="min-w-0 flex-1">
               <p className="truncate text-[15px] leading-5.5">{run.briefPreview}</p>
               <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-4.5 text-ink-muted">
-                <span>Penugasan #{run.id}</span>
+                <span>
+                  Penugasan #{run.id} untuk {workerName(run.workerId)}
+                </span>
                 <span>{formatRelative(run.createdAt)}</span>
                 <span>{formatNumber(run.totalTokens)} token</span>
                 {run.mode === "v1" && <Badge tone="neutral">Mode pembanding</Badge>}

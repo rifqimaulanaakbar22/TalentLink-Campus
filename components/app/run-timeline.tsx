@@ -3,18 +3,9 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { cn } from "@/app/_lib/cn";
 import { formatDuration, formatNumber } from "@/app/_lib/format";
 import type { RunDetailResponse, StepName, StepView } from "@/app/_lib/types";
+import { stepLabels, workerName } from "@/app/_lib/worker-copy";
 
 const STEP_ORDER: StepName[] = ["parse", "normalize", "search", "score", "explain", "verify", "brief"];
-
-const STEP_LABEL: Record<StepName, string> = {
-  parse: "Memahami brief",
-  normalize: "Menormalkan skill",
-  search: "Mencari kandidat",
-  score: "Menghitung skor",
-  explain: "Menulis alasan berbukti",
-  verify: "Verifikasi ID bukti",
-  brief: "Menyusun Link Brief",
-};
 
 function Indicator({ step }: { step: StepView | undefined }) {
   const base = "relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full";
@@ -51,10 +42,14 @@ export function RunTimeline({ detail }: { detail: RunDetailResponse }) {
   const byStep = new Map(detail.steps.map((s) => [s.step, s]));
   const halted = detail.run.status === "needs_clarification" || detail.run.status === "failed";
   const estimate = detail.steps.some((s) => s.isEstimate);
+  const labels = stepLabels(detail.run.workerId);
 
   return (
     <Card>
-      <CardHeader title="Jejak kerja Netra" description="Setiap langkah tercatat beserta waktu, model, dan tokennya." />
+      <CardHeader
+        title={`Jejak kerja ${workerName(detail.run.workerId)}`}
+        description="Setiap langkah tercatat beserta waktu, model, dan tokennya."
+      />
       <ol className="relative" aria-live="polite">
         {STEP_ORDER.map((name, i) => {
           const step = byStep.get(name);
@@ -66,7 +61,7 @@ export function RunTimeline({ detail }: { detail: RunDetailResponse }) {
               <Indicator step={step} />
               <div className="min-w-0 flex-1 pt-0.5">
                 <p className="flex flex-wrap items-baseline gap-x-2">
-                  <span className={cn("font-medium", !step && "text-ink-muted")}>{STEP_LABEL[name]}</span>
+                  <span className={cn("font-medium", !step && "text-ink-muted")}>{labels[name]}</span>
                   <span className="font-mono text-xs text-ink-muted">{name}</span>
                   <span className="sr-only">
                     {step ? STATUS_TEXT[step.status] : halted ? "tidak dijalankan" : "menunggu"}

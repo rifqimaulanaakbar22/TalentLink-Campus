@@ -7,10 +7,24 @@ import { Card } from "@/components/ui/card";
 import { TextAreaField } from "@/components/ui/field";
 import { ErrorState } from "@/components/ui/states";
 import { api } from "@/app/_lib/api";
+import type { WorkerId } from "@/app/_lib/types";
+import { workerName } from "@/app/_lib/worker-copy";
 import { Mascot } from "./mascot";
 
-/** Kotak jawab saat Netra bertanya balik (FR-R3). */
-export function ClarifyBox({ runId, question, onDone }: { runId: number; question: string; onDone: () => void }) {
+/** Kotak jawab saat worker bertanya balik (FR-R3). */
+export function ClarifyBox({
+  runId,
+  workerId = "netra",
+  question,
+  onDone,
+}: {
+  runId: number;
+  workerId?: WorkerId;
+  question: string;
+  onDone: () => void;
+}) {
+  const name = workerName(workerId);
+  const jaya = workerId === "jaya";
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +32,7 @@ export function ClarifyBox({ runId, question, onDone }: { runId: number; questio
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (answer.trim().length < 3) {
-      setError("Tulis jawaban singkat, misalnya topik atau skill yang dibutuhkan.");
+      setError(jaya ? "Tulis jawaban singkat, misalnya jumlah anggota tim dan bidang lomba." : "Tulis jawaban singkat, misalnya topik atau skill yang dibutuhkan.");
       return;
     }
     setBusy(true);
@@ -35,10 +49,10 @@ export function ClarifyBox({ runId, question, onDone }: { runId: number; questio
   return (
     <Card variant="highlight">
       <div className="flex items-start gap-4">
-        <Mascot workerId="netra" size={48} />
+        <Mascot workerId={workerId} size={48} />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold">Netra butuh klarifikasi</span>
+            <span className="font-semibold">{name} butuh klarifikasi</span>
             <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
               <Bot aria-hidden className="size-3.5" />
               Digital Worker (AI)
@@ -48,7 +62,9 @@ export function ClarifyBox({ runId, question, onDone }: { runId: number; questio
             {question}
           </p>
           <p className="mt-2 text-[13px] text-ink-muted">
-            Netra tidak menebak skill yang tidak disebut. Jawaban Anda melanjutkan run ini.
+            {jaya
+              ? "Jaya hanya memakai syarat yang tertulis di guidebook. Jawaban Anda melanjutkan penugasan ini."
+              : "Netra tidak menebak skill yang tidak disebut. Jawaban Anda melanjutkan penugasan ini."}
           </p>
         </div>
       </div>
@@ -58,7 +74,11 @@ export function ClarifyBox({ runId, question, onDone }: { runId: number; questio
           rows={3}
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
-          placeholder="Contoh: Computer Vision dan Python, untuk riset deteksi objek."
+          placeholder={
+            jaya
+              ? "Contoh: Tim 3 orang untuk lomba aplikasi AI, butuh pengembang model, pengembang web, dan presenter."
+              : "Contoh: Computer Vision dan Python, untuk riset deteksi objek."
+          }
         />
         {error && <ErrorState message={error} />}
         <Button type="submit" disabled={busy}>

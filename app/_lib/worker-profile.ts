@@ -4,7 +4,7 @@
 import type { WorkerId } from "./types";
 
 /**
- * Cakupan MVP: Netra (bertugas) dan Jaya (dalam pelatihan).
+ * Cakupan MVP: Netra dan Jaya, keduanya bertugas.
  * Kanca dikeluarkan dari cakupan. Tipe WorkerId di backend masih memuat "kanca",
  * jadi frontend menyaring daftar worker dengan konstanta ini.
  */
@@ -36,7 +36,7 @@ export const WORKER_PROFILE: Partial<Record<WorkerId, WorkerProfile>> = {
   },
   jaya: {
     employeeId: "DW-KMHS-01",
-    lifecycle: "pelatihan",
+    lifecycle: "bertugas",
     knowledgeBase: ["Guidebook lomba yang diunggah", "Talent Graph kampus"],
     access: "Membaca data mahasiswa dan guidebook lomba.",
     deliverable: "Usulan tim lomba yang lolos syarat",

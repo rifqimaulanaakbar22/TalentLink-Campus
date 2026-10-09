@@ -121,7 +121,7 @@ export function WorkerBadge({ worker, usage }: { worker: WorkerCard; usage: Toke
         </dl>
 
         <div className="mt-auto flex flex-wrap gap-2 pt-5">
-          <ButtonLink href="/tasks/new" size="lg">
+          <ButtonLink href={`/tasks/new?worker=${worker.id}`} size="lg">
             <Play aria-hidden className="size-4" />
             Tugaskan {worker.nama}
           </ButtonLink>
@@ -134,6 +134,40 @@ export function WorkerBadge({ worker, usage }: { worker: WorkerCard; usage: Toke
         </div>
       </div>
     </section>
+  );
+}
+
+/** Baris ringkas untuk rekan worker yang sudah bertugas: status, penempatan, dan tombol tugaskan. */
+export function TeammateRow({ worker }: { worker: WorkerCard }) {
+  const profile = WORKER_PROFILE[worker.id];
+  if (!profile) return null;
+  const busy = worker.status === "bekerja";
+  return (
+    <li className="flex items-start gap-3 py-4">
+      <Mascot workerId={worker.id} size={44} decorative />
+      <div className="min-w-0 flex-1">
+        <p className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold">{worker.nama}</span>
+          <Badge tone={busy ? "brand" : "success"}>{busy ? "Sedang mengerjakan tugas" : "Bertugas"}</Badge>
+        </p>
+        <p className="text-[13px] leading-4.5">{worker.jabatan}</p>
+        <p className="mt-1 text-[13px] leading-4.5 text-ink-muted">
+          {worker.unit}, melapor ke {worker.melapor_ke}. Menghasilkan {profile.deliverable.toLowerCase()}.
+        </p>
+        <p className="mt-1 font-mono text-xs text-ink-muted">{profile.employeeId}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <ButtonLink href={`/tasks/new?worker=${worker.id}`} size="sm">
+            <Play aria-hidden className="size-4" />
+            Tugaskan {worker.nama}
+          </ButtonLink>
+          {worker.activeRunId !== null && (
+            <ButtonLink href={`/runs/${worker.activeRunId}`} variant="secondary" size="sm">
+              Lihat tugas berjalan
+            </ButtonLink>
+          )}
+        </div>
+      </div>
+    </li>
   );
 }
 

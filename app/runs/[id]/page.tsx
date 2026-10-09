@@ -18,6 +18,7 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/ui/states";
 import { api } from "@/app/_lib/api";
 import { formatRelative } from "@/app/_lib/format";
 import { useRun } from "@/app/_lib/use-run";
+import { workerName } from "@/app/_lib/worker-copy";
 import type { RunDetailResponse } from "@/app/_lib/types";
 
 function WorkingCard({ detail }: { detail: RunDetailResponse }) {
@@ -25,11 +26,11 @@ function WorkingCard({ detail }: { detail: RunDetailResponse }) {
   return (
     <Card variant="highlight">
       <div className="flex items-start gap-4">
-        <Mascot workerId="netra" size={48} />
+        <Mascot workerId={detail.run.workerId} size={48} />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">
-              {detail.run.status === "queued" ? "Tugas masuk antrean" : "Netra sedang bekerja"}
+              {detail.run.status === "queued" ? "Tugas masuk antrean" : `${workerName(detail.run.workerId)} sedang bekerja`}
             </span>
             <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
               <Bot aria-hidden className="size-3.5" />
@@ -69,7 +70,7 @@ function FailedCard({ detail, onDone }: { detail: RunDetailResponse; onDone: () 
     <Card>
       <EmptyState
         icon={RefreshCw}
-        title="Netra berhenti karena gangguan"
+        title={`${workerName(detail.run.workerId)} berhenti karena gangguan`}
         description={`${detail.run.errorMessage ?? "Terjadi kesalahan."} Langkah yang sudah selesai tetap tersimpan.`}
         action={
           <Button onClick={retry} disabled={busy}>
@@ -137,9 +138,9 @@ export default function DetailRunPage() {
       </ButtonLink>
       <PageHeader
         title={`Penugasan #${run.id}`}
-        description={`“${briefMain}”`}
+        description={run.workerId === "jaya" ? `Guidebook: ${briefMain.split("\n")[0]}` : `“${briefMain}”`}
         actions={
-          <ButtonLink href="/tasks/new" variant="secondary">
+          <ButtonLink href={`/tasks/new?worker=${run.workerId}`} variant="secondary">
             <Plus aria-hidden className="size-4" />
             Tugaskan lagi
           </ButtonLink>
@@ -165,7 +166,7 @@ export default function DetailRunPage() {
         <div className="lg:col-span-7">
           {(run.status === "queued" || run.status === "running") && <WorkingCard detail={data} />}
           {run.status === "needs_clarification" && (
-            <ClarifyBox runId={run.id} question={run.clarificationQuestion ?? ""} onDone={refresh} />
+            <ClarifyBox runId={run.id} workerId={run.workerId} question={run.clarificationQuestion ?? ""} onDone={refresh} />
           )}
           {run.status === "failed" && <FailedCard detail={data} onDone={refresh} />}
           {data.result && (
