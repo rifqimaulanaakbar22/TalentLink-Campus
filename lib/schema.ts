@@ -123,3 +123,28 @@ export const approvals = sqliteTable(
   },
   (t) => [index("idx_approvals_run").on(t.runId, t.id)],
 );
+
+// ---------- Autentikasi (fitur login) ----------
+
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey(),
+  email: text("email").notNull().unique(), // disimpan huruf kecil
+  name: text("name").notNull(),
+  role: text("role", { enum: ["dosen", "kemahasiswaan"] }).notNull(),
+  passwordHash: text("password_hash").notNull(), // scrypt$N$r$p$salt$hash
+  createdAt: text("created_at").notNull(),
+  lastLoginAt: text("last_login_at"),
+});
+
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(), // SHA-256 dari token di cookie, bukan token itu sendiri
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (t) => [index("idx_sessions_user").on(t.userId)],
+);
