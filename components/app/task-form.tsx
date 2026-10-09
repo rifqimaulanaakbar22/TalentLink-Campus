@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bot, LoaderCircle, Play } from "lucide-react";
+import { Bot, LoaderCircle, OctagonX, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,9 +12,11 @@ import { ErrorState } from "@/components/ui/states";
 import { api, USE_MOCK } from "@/app/_lib/api";
 import { mockWorkerBase } from "@/app/_lib/fixtures";
 import { EXAMPLE_BRIEFS } from "@/app/_lib/mock-data";
-import type { WorkerId } from "@/app/_lib/types";
+import type { RunMode, WorkerId } from "@/app/_lib/types";
+import { useApi } from "@/app/_lib/use-api";
 import { formCopy } from "@/app/_lib/worker-copy";
 import { Mascot } from "./mascot";
+import { FixedPath, PathPicker } from "./path-picker";
 
 const MIN_BRIEF = 15;
 
@@ -23,10 +26,16 @@ export function TaskForm({ workerId = "netra" }: { workerId?: WorkerId }) {
   const copy = formCopy(workerId, EXAMPLE_BRIEFS);
   const router = useRouter();
   const [brief, setBrief] = useState("");
-  const [compare, setCompare] = useState(false);
+  const [mode, setMode] = useState<RunMode>("v2");
   const [fieldError, setFieldError] = useState<string | undefined>();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Neraca Token: perkiraan token per jalur dan rem anggaran. Jika gagal dimuat, form tetap bisa dipakai.
+  const tokens = useApi(api.getTokenReport);
+  const report = tokens.data;
+  const stopped = report?.usage.stop ?? false;
+  // Jalur Pembanding yang dikunci tidak pernah dikirim, walaupun sempat dipilih sebelum data anggaran tiba.
+  const effectiveMode: RunMode = copy.allowCompare && !report?.comparisonLocked ? mode : "v2";
   const length = brief.trim().length;
 
   async function submit(e: React.FormEvent) {
@@ -43,8 +52,7 @@ export function TaskForm({ workerId = "netra" }: { workerId?: WorkerId }) {
     setSubmitError(null);
     setSubmitting(true);
     try {
-      const mode = copy.allowCompare && compare ? "v1" : "v2";
-      const { runId } = await api.createRun({ workerId, brief: brief.trim(), mode });
+      const { runId } = await api.createRun({ workerId, brief: brief.trim(), mode: effectiveMode });
       router.push(`/runs/${runId}`);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Tugas belum terkirim. Coba lagi.");
@@ -98,21 +106,22 @@ export function TaskForm({ workerId = "netra" }: { workerId?: WorkerId }) {
           ))}
         </ul>
 
-        {copy.allowCompare && (
-        <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-field bg-panel p-4">
-          <input
-            type="checkbox"
-            checked={compare}
-            onChange={(e) => setCompare(e.target.checked)}
-            className="mt-0.5 size-4 accent-brand-600"
-          />
-          <span>
-            <span className="block text-[15px] font-medium">Jalankan sebagai mode pembanding</span>
-            <span className="block text-[13px] leading-4.5 text-ink-muted">
-              Semua kandidat dikirim ke AI tanpa penyaringan. Hanya untuk membandingkan biaya token; lihat totalnya di jejak kerja.
-            </span>
-          </span>
-        </label>
+        {copy.allowCompare ? (
+          <PathPicker value={effectiveMode} onChange={setMode} report={report} />
+        ) : (
+          <FixedPath workerName={worker.nama} reason={copy.fixedPathReason ?? ""} />
+        )}
+
+        {stopped && (
+          <div role="alert" className="mt-5 flex items-start gap-3 rounded-field bg-danger-bg p-4 text-danger">
+            <OctagonX aria-hidden className="mt-0.5 size-5 shrink-0" />
+            <p className="text-[13px] leading-4.5">
+              Anggaran token sudah mencapai batas berhenti, jadi penugasan baru ditahan sampai alokasi ditambah.{" "}
+              <Link href="/tokens" className="font-medium underline">
+                Lihat Neraca Token
+              </Link>
+            </p>
+          </div>
         )}
 
         {submitError && (
@@ -122,7 +131,7 @@ export function TaskForm({ workerId = "netra" }: { workerId?: WorkerId }) {
         )}
 
         <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-line pt-6">
-          <Button type="submit" size="lg" disabled={submitting}>
+          <Button type="submit" size="lg" disabled={submitting || stopped}>
             {submitting ? (
               <LoaderCircle aria-hidden className="size-5 animate-spin" />
             ) : (

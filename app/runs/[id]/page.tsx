@@ -17,6 +17,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/states";
 import { api } from "@/app/_lib/api";
 import { formatRelative } from "@/app/_lib/format";
+import { PATH_COPY } from "@/app/_lib/token-path";
 import { useRun } from "@/app/_lib/use-run";
 import { workerName } from "@/app/_lib/worker-copy";
 import type { RunDetailResponse } from "@/app/_lib/types";
@@ -148,7 +149,7 @@ export default function DetailRunPage() {
       />
       <div className="-mt-3 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-ink-muted">
         <RunStatusBadge status={run.status} />
-        {run.mode === "v1" && <Badge tone="neutral">Mode pembanding</Badge>}
+        <Badge tone="neutral">{PATH_COPY[run.mode].name}</Badge>
         <span>Diberikan {formatRelative(run.createdAt)}</span>
         {briefRest.length > 0 && <span>Jawaban klarifikasi Anda: “{briefRest.join(" ")}”</span>}
       </div>

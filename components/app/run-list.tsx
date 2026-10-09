@@ -31,7 +31,7 @@ export function RunList({ runs, showNextStep = false }: { runs: RunSummary[]; sh
                 </span>
                 <span>{formatRelative(run.createdAt)}</span>
                 <span>{formatNumber(run.totalTokens)} token</span>
-                {run.mode === "v1" && <Badge tone="neutral">Mode pembanding</Badge>}
+                {run.mode === "v1" && <Badge tone="neutral">Jalur Pembanding</Badge>}
               </p>
               {showNextStep && NEXT_STEP[run.status] && (
                 <p className="mt-1 text-[13px] font-medium text-brand-700">{NEXT_STEP[run.status]}</p>
