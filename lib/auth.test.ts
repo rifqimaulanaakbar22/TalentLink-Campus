@@ -6,7 +6,7 @@ vi.hoisted(() => {
   process.env.LLM_MOCK = "true";
 });
 
-import { getSqlite } from "./db";
+import { getDb } from "./db";
 import { seedDatabase } from "./seed";
 import { ApiError } from "./service";
 import {
@@ -22,7 +22,6 @@ import {
   verifyPassword,
 } from "./auth";
 
-const db = () => getSqlite();
 const rina = DEMO_ACCOUNTS[0];
 
 async function expectApiError(p: Promise<unknown>, status: number, message?: string) {
@@ -37,9 +36,12 @@ async function expectApiError(p: Promise<unknown>, status: number, message?: str
   throw new Error(`Seharusnya melempar ApiError ${status}`);
 }
 
+const count = async (sql: string) => ((await (await getDb()).get<{ n: number }>(sql)) as { n: number }).n;
+
 beforeEach(async () => {
-  db().prepare("DELETE FROM sessions").run();
-  db().prepare("DELETE FROM users").run();
+  const db = await getDb();
+  await db.run("DELETE FROM sessions");
+  await db.run("DELETE FROM users");
   await ensureDemoUsers();
 });
 
@@ -69,13 +71,12 @@ describe("akun demo", () => {
   it("dibuat sekali walau dipanggil berulang", async () => {
     await ensureDemoUsers();
     await ensureDemoUsers();
-    const n = (db().prepare("SELECT count(*) AS n FROM users").get() as { n: number }).n;
-    expect(n).toBe(DEMO_ACCOUNTS.length);
+    expect(await count("SELECT count(*) AS n FROM users")).toBe(DEMO_ACCOUNTS.length);
   });
 
-  it("kata sandi tersimpan sebagai hash, bukan teks asli", () => {
-    const row = db().prepare("SELECT password_hash FROM users WHERE email = ?").get(rina.email) as { password_hash: string };
-    expect(row.password_hash).not.toContain(DEMO_PASSWORD);
+  it("kata sandi tersimpan sebagai hash, bukan teks asli", async () => {
+    const row = await (await getDb()).get<{ password_hash: string }>("SELECT password_hash FROM users WHERE email = ?", rina.email);
+    expect(row?.password_hash).not.toContain(DEMO_PASSWORD);
   });
 });
 
@@ -90,7 +91,7 @@ describe("login", () => {
 
   it("token sesi disimpan sebagai hash di database", async () => {
     const { token } = await authenticate({ email: rina.email, password: DEMO_PASSWORD });
-    const ids = (db().prepare("SELECT id FROM sessions").all() as { id: string }[]).map((r) => r.id);
+    const ids = (await (await getDb()).all<{ id: string }>("SELECT id FROM sessions")).map((r) => r.id);
     expect(ids).toHaveLength(1);
     expect(ids[0]).not.toBe(token);
   });
@@ -110,30 +111,31 @@ describe("login", () => {
 describe("sesi", () => {
   it("token valid mengembalikan pengguna; token asing atau kosong tidak", async () => {
     const { token } = await authenticate({ email: rina.email, password: DEMO_PASSWORD });
-    expect(getUserBySessionToken(token)).toMatchObject({ email: rina.email });
-    expect(getUserBySessionToken("token-palsu")).toBeNull();
-    expect(getUserBySessionToken(undefined)).toBeNull();
-    expect(getUserBySessionToken("")).toBeNull();
+    expect(await getUserBySessionToken(token)).toMatchObject({ email: rina.email });
+    expect(await getUserBySessionToken("token-palsu")).toBeNull();
+    expect(await getUserBySessionToken(undefined)).toBeNull();
+    expect(await getUserBySessionToken("")).toBeNull();
   });
 
   it("sesi kedaluwarsa ditolak dan dihapus", async () => {
     const { token } = await authenticate({ email: rina.email, password: DEMO_PASSWORD });
-    vi.useFakeTimers();
+    // Hanya Date yang dipalsukan, supaya promise libSQL tetap berjalan.
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(Date.now() + SESSION_TTL_MS + 1_000);
-    expect(getUserBySessionToken(token)).toBeNull();
-    expect((db().prepare("SELECT count(*) AS n FROM sessions").get() as { n: number }).n).toBe(0);
+    expect(await getUserBySessionToken(token)).toBeNull();
+    expect(await count("SELECT count(*) AS n FROM sessions")).toBe(0);
   });
 
   it("logout menghapus sesi sehingga token tidak berlaku lagi", async () => {
     const { token } = await authenticate({ email: rina.email, password: DEMO_PASSWORD });
-    deleteSession(token);
-    expect(getUserBySessionToken(token)).toBeNull();
-    expect(() => deleteSession(undefined)).not.toThrow();
+    await deleteSession(token);
+    expect(await getUserBySessionToken(token)).toBeNull();
+    await expect(deleteSession(undefined)).resolves.toBeUndefined();
   });
 
   it("seed ulang data tidak menghapus akun dan sesi", async () => {
     const { token } = await authenticate({ email: rina.email, password: DEMO_PASSWORD });
-    seedDatabase(db());
-    expect(getUserBySessionToken(token)).toMatchObject({ email: rina.email });
+    await seedDatabase(await getDb());
+    expect(await getUserBySessionToken(token)).toMatchObject({ email: rina.email });
   });
 });

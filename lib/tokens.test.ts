@@ -6,56 +6,53 @@ vi.hoisted(() => {
   process.env.LLM_MOCK = "true";
 });
 
-import { getSqlite, nowIso } from "./db";
+import { getDb, nowIso } from "./db";
 import { seedDatabase } from "./seed";
 import { ApiError, MSG, createRunFromBody, retryRun } from "./service";
 import { computeSavings, getTokenReport } from "./tokens";
 
 const BRIEF = "Butuh 2 mahasiswa Python dan Computer Vision untuk riset deteksi objek";
 
-function addRun(workerId: "netra" | "jaya", mode: "v1" | "v2", status: string): number {
+async function addRun(workerId: "netra" | "jaya", mode: "v1" | "v2", status: string): Promise<number> {
   const now = nowIso();
-  return Number(
-    getSqlite()
-      .prepare(
-        `INSERT INTO runs (worker_id, skill, mode, brief_text, status, created_at, updated_at)
-         VALUES (?, ?, ?, 'brief uji', ?, ?, ?)`,
-      )
-      .run(workerId, workerId === "jaya" ? "competition" : "research", mode, status, now, now).lastInsertRowid,
+  const res = await (await getDb()).run(
+    `INSERT INTO runs (worker_id, skill, mode, brief_text, status, created_at, updated_at)
+     VALUES (?, ?, ?, 'brief uji', ?, ?, ?)`,
+    workerId, workerId === "jaya" ? "competition" : "research", mode, status, now, now,
+  );
+  return res.lastInsertRowid;
+}
+
+async function addCall(runId: number | null, step: string, input: number, output: number, isEstimate = false) {
+  await (await getDb()).run(
+    `INSERT INTO token_ledger (run_id, step, model, input_tokens, output_tokens, latency_ms, is_estimate, created_at)
+     VALUES (?, ?, 'qwen-uji', ?, ?, 100, ?, ?)`,
+    runId, step, input, output, isEstimate ? 1 : 0, nowIso(),
   );
 }
 
-function addCall(runId: number | null, step: string, input: number, output: number, isEstimate = false) {
-  getSqlite()
-    .prepare(
-      `INSERT INTO token_ledger (run_id, step, model, input_tokens, output_tokens, latency_ms, is_estimate, created_at)
-       VALUES (?, ?, 'qwen-uji', ?, ?, 100, ?, ?)`,
-    )
-    .run(runId, step, input, output, isEstimate ? 1 : 0, nowIso());
-}
-
 /** Pemakaian contoh: total 44.800 token. */
-function seedUsage() {
-  const v1 = addRun("netra", "v1", "approved");
-  addCall(v1, "parse", 400, 100);
-  addCall(v1, "explain", 27_000, 3_000);
-  const v2 = addRun("netra", "v2", "awaiting_approval");
-  addCall(v2, "parse", 400, 100);
-  addCall(v2, "explain", 4_000, 1_500, true);
+async function seedUsage() {
+  const v1 = await addRun("netra", "v1", "approved");
+  await addCall(v1, "parse", 400, 100);
+  await addCall(v1, "explain", 27_000, 3_000);
+  const v2 = await addRun("netra", "v2", "awaiting_approval");
+  await addCall(v2, "parse", 400, 100);
+  await addCall(v2, "explain", 4_000, 1_500, true);
   // Penugasan gagal dan penugasan Jaya tidak ikut perbandingan jalur.
-  const failed = addRun("netra", "v2", "failed");
-  addCall(failed, "parse", 400, 100);
-  const jaya = addRun("jaya", "v2", "awaiting_approval");
-  addCall(jaya, "parse", 600, 200);
-  addCall(jaya, "explain", 5_000, 1_000);
+  const failed = await addRun("netra", "v2", "failed");
+  await addCall(failed, "parse", 400, 100);
+  const jaya = await addRun("jaya", "v2", "awaiting_approval");
+  await addCall(jaya, "parse", 600, 200);
+  await addCall(jaya, "explain", 5_000, 1_000);
   // Token dari penugasan yang sudah terhapus saat seed ulang.
-  addCall(null, "explain", 800, 200);
+  await addCall(null, "explain", 800, 200);
   return { v1, v2, failed, jaya };
 }
 
-function expectApiError(fn: () => unknown, status: number, message: string) {
+async function expectApiError(p: Promise<unknown>, status: number, message: string) {
   try {
-    fn();
+    await p;
   } catch (err) {
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).status).toBe(status);
@@ -65,8 +62,8 @@ function expectApiError(fn: () => unknown, status: number, message: string) {
   throw new Error(`Seharusnya melempar ApiError ${status}`);
 }
 
-beforeEach(() => {
-  seedDatabase(getSqlite(), { resetLedger: true });
+beforeEach(async () => {
+  await seedDatabase(await getDb(), { resetLedger: true });
 });
 
 afterEach(() => {
@@ -92,8 +89,8 @@ describe("computeSavings", () => {
 });
 
 describe("getTokenReport", () => {
-  it("database kosong: semua nol, sisa sampai batas berhenti, pembanding terbuka", () => {
-    const r = getTokenReport();
+  it("database kosong: semua nol, sisa sampai batas berhenti, pembanding terbuka", async () => {
+    const r = await getTokenReport();
     expect(r.usage.total).toBe(0);
     expect(r.warnAt).toBe(8_000_000);
     expect(r.stopAt).toBe(9_500_000);
@@ -107,9 +104,9 @@ describe("getTokenReport", () => {
     expect(r.unassigned).toBe(0);
   });
 
-  it("merangkum per jalur (hanya penugasan Netra yang selesai), per langkah, dan per worker", () => {
-    seedUsage();
-    const r = getTokenReport();
+  it("merangkum per jalur (hanya penugasan Netra yang selesai), per langkah, dan per worker", async () => {
+    await seedUsage();
+    const r = await getTokenReport();
     expect(r.usage.total).toBe(44_800);
     expect(r.usage.byWorker.netra).toBe(37_000);
     expect(r.usage.byWorker.jaya).toBe(6_800);
@@ -125,20 +122,20 @@ describe("getTokenReport", () => {
     expect(r.estimatedCalls).toBe(1);
   });
 
-  it("penugasan bertoken 0 (LLM_MOCK) tidak menurunkan rata-rata jalur", () => {
-    seedUsage();
-    const mockRun = addRun("netra", "v1", "awaiting_approval");
-    addCall(mockRun, "parse", 0, 0);
-    addCall(mockRun, "explain", 0, 0);
-    const r = getTokenReport();
+  it("penugasan bertoken 0 (LLM_MOCK) tidak menurunkan rata-rata jalur", async () => {
+    await seedUsage();
+    const mockRun = await addRun("netra", "v1", "awaiting_approval");
+    await addCall(mockRun, "parse", 0, 0);
+    await addCall(mockRun, "explain", 0, 0);
+    const r = await getTokenReport();
     expect(r.byMode.v1).toEqual({ runs: 1, tokens: 30_500, avgPerRun: 30_500 });
     expect(r.calls).toBe(10);
   });
 
-  it("anggaran kecil: batas dihitung dari TOKEN_BUDGET_TOTAL dan pembanding dikunci di atas batas peringatan", () => {
+  it("anggaran kecil: batas dihitung dari TOKEN_BUDGET_TOTAL dan pembanding dikunci di atas batas peringatan", async () => {
     process.env.TOKEN_BUDGET_TOTAL = "50000";
-    seedUsage();
-    const r = getTokenReport();
+    await seedUsage();
+    const r = await getTokenReport();
     expect(r.warnAt).toBe(40_000);
     expect(r.stopAt).toBe(47_500);
     expect(r.remaining).toBe(2_700);
@@ -148,40 +145,40 @@ describe("getTokenReport", () => {
 });
 
 describe("Rem anggaran di POST /api/runs dan retry", () => {
-  it("di bawah batas peringatan kedua jalur boleh dipakai", () => {
-    seedUsage();
-    expect(createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v1" }).runId).toBeGreaterThan(0);
-    expect(createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v2" }).runId).toBeGreaterThan(0);
+  it("di bawah batas peringatan kedua jalur boleh dipakai", async () => {
+    await seedUsage();
+    expect((await createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v1" })).runId).toBeGreaterThan(0);
+    expect((await createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v2" })).runId).toBeGreaterThan(0);
   });
 
-  it("di atas batas peringatan Jalur Pembanding ditolak 409, Jalur Hemat dan Jaya tetap jalan", () => {
+  it("di atas batas peringatan Jalur Pembanding ditolak 409, Jalur Hemat dan Jaya tetap jalan", async () => {
     process.env.TOKEN_BUDGET_TOTAL = "50000";
-    seedUsage();
-    expectApiError(() => createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v1" }), 409, MSG.comparisonLocked);
-    expect(createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v2" }).runId).toBeGreaterThan(0);
+    await seedUsage();
+    await expectApiError(createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v1" }), 409, MSG.comparisonLocked);
+    expect((await createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v2" })).runId).toBeGreaterThan(0);
     // Jaya selalu memakai Jalur Hemat, jadi mode v1 dari klien tidak dikunci.
-    expect(createRunFromBody({ workerId: "jaya", brief: BRIEF, mode: "v1" }).runId).toBeGreaterThan(0);
+    expect((await createRunFromBody({ workerId: "jaya", brief: BRIEF, mode: "v1" })).runId).toBeGreaterThan(0);
   });
 
-  it("di atas batas berhenti semua penugasan baru ditolak 409", () => {
+  it("di atas batas berhenti semua penugasan baru ditolak 409", async () => {
     process.env.TOKEN_BUDGET_TOTAL = "45000";
-    seedUsage();
-    expectApiError(() => createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v2" }), 409, MSG.budgetStop);
-    expectApiError(() => createRunFromBody({ workerId: "jaya", brief: BRIEF, mode: "v2" }), 409, MSG.budgetStop);
+    await seedUsage();
+    await expectApiError(createRunFromBody({ workerId: "netra", brief: BRIEF, mode: "v2" }), 409, MSG.budgetStop);
+    await expectApiError(createRunFromBody({ workerId: "jaya", brief: BRIEF, mode: "v2" }), 409, MSG.budgetStop);
   });
 
-  it("coba lagi penugasan Jalur Pembanding ikut dikunci di atas batas peringatan", () => {
+  it("coba lagi penugasan Jalur Pembanding ikut dikunci di atas batas peringatan", async () => {
     process.env.TOKEN_BUDGET_TOTAL = "50000";
-    seedUsage();
-    const failedV1 = addRun("netra", "v1", "failed");
-    expectApiError(() => retryRun(failedV1), 409, MSG.comparisonLocked);
-    const failedV2 = addRun("netra", "v2", "failed");
-    expect(retryRun(failedV2).status).toBe("queued");
+    await seedUsage();
+    const failedV1 = await addRun("netra", "v1", "failed");
+    await expectApiError(retryRun(failedV1), 409, MSG.comparisonLocked);
+    const failedV2 = await addRun("netra", "v2", "failed");
+    expect((await retryRun(failedV2)).status).toBe("queued");
   });
 
-  it("validasi body tetap didahulukan sebelum rem anggaran", () => {
+  it("validasi body tetap didahulukan sebelum rem anggaran", async () => {
     process.env.TOKEN_BUDGET_TOTAL = "45000";
-    seedUsage();
-    expectApiError(() => createRunFromBody({ workerId: "netra", brief: "pendek", mode: "v2" }), 400, "Brief terlalu pendek, minimal 15 karakter.");
+    await seedUsage();
+    await expectApiError(createRunFromBody({ workerId: "netra", brief: "pendek", mode: "v2" }), 400, "Brief terlalu pendek, minimal 15 karakter.");
   });
 });
