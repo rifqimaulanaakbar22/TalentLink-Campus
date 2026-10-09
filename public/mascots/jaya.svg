@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="t">
+  <title id="t">Jaya, elang Jawa</title>
+  <circle cx="48" cy="48" r="48" fill="#FFF1E6"/>
+  <path d="M34 22 L30 8 L40 18 L42 6 L48 18 L54 8 L54 22 Z" fill="#9A3412"/>
+  <path d="M22 84 C22 56 30 30 48 24 C66 30 74 56 74 84 Z" fill="#EA580C"/>
+  <path d="M30 84 C30 64 38 52 48 50 C58 52 66 64 66 84 Z" fill="#FED7AA"/>
+  <path d="M36 60 l4 4 l4 -4 M52 60 l4 4 l4 -4 M40 70 l4 4 l4 -4 M48 70 l4 4 l4 -4" stroke="#FB923C" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="48" cy="38" rx="15" ry="13" fill="#FFF7ED"/>
+  <circle cx="41" cy="36" r="4.5" fill="#1C1917"/>
+  <circle cx="55" cy="36" r="4.5" fill="#1C1917"/>
+  <circle cx="42.4" cy="34.6" r="1.4" fill="#FFFFFF"/>
+  <circle cx="56.4" cy="34.6" r="1.4" fill="#FFFFFF"/>
+  <path d="M37 31 l7 2 M59 31 l-7 2" stroke="#7C2D12" stroke-width="2" stroke-linecap="round"/>
+  <path d="M43 42 h10 q0 8 -5 11 q-2 -4 -5 -4 Z" fill="#FACC15"/>
+</svg>

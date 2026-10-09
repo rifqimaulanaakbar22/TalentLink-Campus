@@ -1,0 +1,46 @@
+// Data worker untuk mode mock (NEXT_PUBLIC_API_MOCK=true). Cakupan MVP: Netra dan Jaya.
+import type { WorkerCard } from "./types";
+
+export const mockWorkerBase: WorkerCard[] = [
+  {
+    id: "netra",
+    nama: "Netra",
+    maskot: "Burung hantu celepuk",
+    arti_nama: "Netra = mata",
+    jabatan: "Research Talent Officer",
+    unit: "LPPM",
+    melapor_ke: "Kepala LPPM",
+    persona: "Tenang, teliti, akademik; selalu menunjuk bukti",
+    salam: "Halo, saya Netra. Riset apa yang sedang Bapak/Ibu siapkan?",
+    level_label: "L2 Analis",
+    tools_diizinkan: ["search_talent_graph", "compute_match_score", "get_evidence", "draft_message"],
+    aksi_butuh_approval: ["send_message"],
+    kpi: ["Precision@3", "Sitasi valid"],
+    warna: "indigo",
+    avatar: "/mascots/netra.svg",
+    status: "bekerja",
+    activeRunId: 14,
+    tokensUsed: 48_210,
+  },
+  {
+    id: "jaya",
+    nama: "Jaya",
+    maskot: "Elang Jawa",
+    arti_nama: "Jaya = kemenangan",
+    jabatan: "Competition Team Officer",
+    unit: "Bagian Kemahasiswaan",
+    melapor_ke: "Kepala Bagian Kemahasiswaan",
+    persona: "Lugas, bersemangat, fokus syarat dan strategi tim",
+    salam: "Saya Jaya. Unggah guidebook lombanya, saya susun timnya.",
+    level_label: "L2 Analis",
+    tools_diizinkan: ["parse_guidebook", "check_eligibility", "build_team", "check_conflict", "draft_message"],
+    aksi_butuh_approval: ["send_message"],
+    kpi: ["Ketepatan Eligibility Check", "Tim tanpa konflik"],
+    warna: "orange",
+    avatar: "/mascots/jaya.svg",
+    status: "segera_hadir",
+    activeRunId: null,
+    tokensUsed: 0,
+  },
+];
+

@@ -1,0 +1,1580 @@
+{
+  "activeStudents": 83,
+  "scenarios": {
+    "cv": {
+      "status": "awaiting_approval",
+      "result": {
+        "mode": "v2",
+        "topic": "Butuh 2 mahasiswa Python dan Computer Vision untuk riset deteksi objek",
+        "requiredSkills": [
+          "Python",
+          "Computer Vision"
+        ],
+        "niceSkills": [],
+        "unknownSkills": [],
+        "noMatch": false,
+        "candidates": [
+          {
+            "code": "S-101",
+            "prodi": "Teknik Informatika",
+            "semester": 6,
+            "score": 100,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Deteksi Objek Kendaraan dengan YOLOv8 [EV-449]",
+                "evidence_ids": [
+                  "EV-449"
+                ]
+              },
+              {
+                "text": "Lulus mata kuliah Pengolahan Citra dengan nilai A [EV-450]",
+                "evidence_ids": [
+                  "EV-450"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-449",
+              "EV-450",
+              "EV-452",
+              "EV-451"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-102",
+            "prodi": "Sains Data Terapan",
+            "semester": 7,
+            "score": 92.5,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Terlibat dalam riset Riset Dosen: Pengenalan Wajah untuk Presensi [EV-455]",
+                "evidence_ids": [
+                  "EV-455"
+                ]
+              },
+              {
+                "text": "Mengerjakan proyek Segmentasi Citra Daun untuk Deteksi Penyakit Tanaman [EV-453]",
+                "evidence_ids": [
+                  "EV-453"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-455",
+              "EV-453",
+              "EV-454",
+              "EV-456"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-103",
+            "prodi": "Teknik Komputer",
+            "semester": 5,
+            "score": 92.5,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Lulus mata kuliah Pengolahan Citra dengan nilai A [EV-458]",
+                "evidence_ids": [
+                  "EV-458"
+                ]
+              },
+              {
+                "text": "Mengerjakan proyek Penghitung Pengunjung Berbasis Kamera [EV-457]",
+                "evidence_ids": [
+                  "EV-457"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-458",
+              "EV-457",
+              "EV-459",
+              "EV-460"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-109",
+            "prodi": "Sains Data Terapan",
+            "semester": 8,
+            "score": 92.5,
+            "hiddenTalent": false,
+            "fairExposure": true,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Terlibat dalam riset Riset Dosen: Deteksi Retak Jalan [EV-477]",
+                "evidence_ids": [
+                  "EV-477"
+                ]
+              },
+              {
+                "text": "Mengerjakan proyek Klasifikasi Sampah dengan CNN [EV-476]",
+                "evidence_ids": [
+                  "EV-476"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-477",
+              "EV-476",
+              "EV-478"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-104",
+            "prodi": "Teknik Informatika",
+            "semester": 4,
+            "score": 90,
+            "hiddenTalent": true,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Pengenalan Plat Nomor Real-time [EV-461]",
+                "evidence_ids": [
+                  "EV-461"
+                ]
+              },
+              {
+                "text": "Mengerjakan proyek Deteksi APD Pekerja Proyek dengan Computer Vision [EV-462]",
+                "evidence_ids": [
+                  "EV-462"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-461",
+              "EV-462",
+              "EV-463"
+            ],
+            "reasonSource": "llm"
+          }
+        ],
+        "invitationDraft": "Yth. [Nama Mahasiswa],\n\nKami sedang menyiapkan riset \"Butuh 2 mahasiswa Python dan Computer Vision untuk riset deteksi objek\" dan menilai pengalaman Anda relevan. Apakah Anda bersedia berdiskusi minggu ini?\n\nSalam,\nTim Riset (disiapkan Netra, Digital Worker AI)",
+        "budgetWarning": false
+      },
+      "steps": [
+        {
+          "step": "parse",
+          "status": "done",
+          "detail": "Netra memahami brief: topik \"Butuh 2 mahasiswa Python dan Computer Vision untuk riset deteksi objek\", skill wajib Python, Computer Vision, butuh 2 orang."
+        },
+        {
+          "step": "normalize",
+          "status": "done",
+          "detail": "Netra memetakan 2 skill ke katalog (wajib: Python, Computer Vision)."
+        },
+        {
+          "step": "search",
+          "status": "done",
+          "detail": "Netra menelusuri 83 profil aktif dan menemukan 71 kandidat dengan bukti relevan."
+        },
+        {
+          "step": "score",
+          "status": "done",
+          "detail": "Netra menilai 71 kandidat; skor tertinggi S-101 (100)."
+        },
+        {
+          "step": "explain",
+          "status": "done",
+          "detail": "Netra menerima alasan untuk 5 kandidat."
+        },
+        {
+          "step": "verify",
+          "status": "done",
+          "detail": "Netra memeriksa sitasi: 10 alasan siap, 0 dibuang karena ID bukti tidak valid."
+        },
+        {
+          "step": "brief",
+          "status": "done",
+          "detail": "Netra menyiapkan 5 kandidat dan draf undangan. Menunggu persetujuan dosen."
+        }
+      ]
+    },
+    "iot": {
+      "status": "awaiting_approval",
+      "result": {
+        "mode": "v2",
+        "topic": "Butuh mahasiswa IoT dan ESP32 untuk riset pemantauan kualitas air",
+        "requiredSkills": [
+          "IoT",
+          "ESP32"
+        ],
+        "niceSkills": [],
+        "unknownSkills": [],
+        "noMatch": false,
+        "candidates": [
+          {
+            "code": "S-106",
+            "prodi": "Teknik Komputer",
+            "semester": 6,
+            "score": 100,
+            "hiddenTalent": true,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Monitoring Kualitas Udara dengan ESP32 [EV-468]",
+                "evidence_ids": [
+                  "EV-468"
+                ]
+              },
+              {
+                "text": "Mengerjakan proyek Smart Farming Berbasis Internet of Things [EV-470]",
+                "evidence_ids": [
+                  "EV-470"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-468",
+              "EV-470",
+              "EV-469"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-075",
+            "prodi": "Teknik Komputer",
+            "semester": 6,
+            "score": 53.8,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Logger Sensor Kelembapan [EV-417]",
+                "evidence_ids": [
+                  "EV-417"
+                ]
+              },
+              {
+                "text": "Meraih Juara Harapan Lomba Embedded C Nasional [EV-419]",
+                "evidence_ids": [
+                  "EV-419"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-417",
+              "EV-419",
+              "EV-418",
+              "EV-420"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-073",
+            "prodi": "Teknik Komputer",
+            "semester": 7,
+            "score": 51.7,
+            "hiddenTalent": false,
+            "fairExposure": true,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Terlibat dalam riset Anggota Riset Dosen bidang ESP32 [EV-404]",
+                "evidence_ids": [
+                  "EV-404"
+                ]
+              },
+              {
+                "text": "Mengerjakan proyek Saklar Wi-Fi Sederhana [EV-408]",
+                "evidence_ids": [
+                  "EV-408"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-404",
+              "EV-408",
+              "EV-410",
+              "EV-407"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-028",
+            "prodi": "Teknik Komputer",
+            "semester": 3,
+            "score": 47,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Logger Sensor Kelembapan [EV-146]",
+                "evidence_ids": [
+                  "EV-146"
+                ]
+              },
+              {
+                "text": "Lulus mata kuliah Workshop Mikrokontroler ESP32 dengan nilai B [EV-148]",
+                "evidence_ids": [
+                  "EV-148"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-146",
+              "EV-148",
+              "EV-150",
+              "EV-147"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-060",
+            "prodi": "Teknik Komputer",
+            "semester": 7,
+            "score": 43.8,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Saklar Wi-Fi Sederhana [EV-344]",
+                "evidence_ids": [
+                  "EV-344"
+                ]
+              },
+              {
+                "text": "Memiliki Sertifikat BNSP ESP32 [EV-341]",
+                "evidence_ids": [
+                  "EV-341"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-344",
+              "EV-341",
+              "EV-342"
+            ],
+            "reasonSource": "llm"
+          }
+        ],
+        "invitationDraft": "Yth. [Nama Mahasiswa],\n\nKami sedang menyiapkan riset \"Butuh mahasiswa IoT dan ESP32 untuk riset pemantauan kualitas air\" dan menilai pengalaman Anda relevan. Apakah Anda bersedia berdiskusi minggu ini?\n\nSalam,\nTim Riset (disiapkan Netra, Digital Worker AI)",
+        "budgetWarning": false
+      },
+      "steps": [
+        {
+          "step": "parse",
+          "status": "done",
+          "detail": "Netra memahami brief: topik \"Butuh mahasiswa IoT dan ESP32 untuk riset pemantauan kualitas air\", skill wajib IoT, ESP32, butuh 3 orang."
+        },
+        {
+          "step": "normalize",
+          "status": "done",
+          "detail": "Netra memetakan 2 skill ke katalog (wajib: IoT, ESP32)."
+        },
+        {
+          "step": "search",
+          "status": "done",
+          "detail": "Netra menelusuri 83 profil aktif dan menemukan 13 kandidat dengan bukti relevan."
+        },
+        {
+          "step": "score",
+          "status": "done",
+          "detail": "Netra menilai 13 kandidat; skor tertinggi S-106 (100)."
+        },
+        {
+          "step": "explain",
+          "status": "done",
+          "detail": "Netra menerima alasan untuk 5 kandidat."
+        },
+        {
+          "step": "verify",
+          "status": "done",
+          "detail": "Netra memeriksa sitasi: 10 alasan siap, 0 dibuang karena ID bukti tidak valid."
+        },
+        {
+          "step": "brief",
+          "status": "done",
+          "detail": "Netra menyiapkan 5 kandidat dan draf undangan. Menunggu persetujuan dosen."
+        }
+      ]
+    },
+    "nlp": {
+      "status": "awaiting_approval",
+      "result": {
+        "mode": "v2",
+        "topic": "Butuh mahasiswa NLP dan Python untuk riset analisis sentimen",
+        "requiredSkills": [
+          "Python",
+          "NLP"
+        ],
+        "niceSkills": [],
+        "unknownSkills": [],
+        "noMatch": false,
+        "candidates": [
+          {
+            "code": "S-031",
+            "prodi": "Teknik Informatika",
+            "semester": 3,
+            "score": 68.3,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Lulus mata kuliah Pemrosesan Bahasa Alami dengan nilai B [EV-171]",
+                "evidence_ids": [
+                  "EV-171"
+                ]
+              },
+              {
+                "text": "Lulus mata kuliah Penulisan Ilmiah dengan nilai A [EV-166]",
+                "evidence_ids": [
+                  "EV-166"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-171",
+              "EV-166",
+              "EV-170",
+              "EV-167"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-013",
+            "prodi": "Teknik Informatika",
+            "semester": 6,
+            "score": 63.3,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Chatbot FAQ Akademik [EV-072]",
+                "evidence_ids": [
+                  "EV-072"
+                ]
+              },
+              {
+                "text": "Meraih Juara Harapan Lomba Python Antar Kampus [EV-069]",
+                "evidence_ids": [
+                  "EV-069"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-072",
+              "EV-069",
+              "EV-074",
+              "EV-073"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-033",
+            "prodi": "Teknik Informatika",
+            "semester": 3,
+            "score": 59.5,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Analisis Sentimen Ulasan Aplikasi [EV-180]",
+                "evidence_ids": [
+                  "EV-180"
+                ]
+              },
+              {
+                "text": "Lulus mata kuliah Pemrograman Python dengan nilai B [EV-182]",
+                "evidence_ids": [
+                  "EV-182"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-180",
+              "EV-182"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-016",
+            "prodi": "Teknik Informatika",
+            "semester": 8,
+            "score": 58.8,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Bot Telegram Jadwal Kuliah [EV-088]",
+                "evidence_ids": [
+                  "EV-088"
+                ]
+              },
+              {
+                "text": "Lulus mata kuliah Pemrosesan Bahasa Alami dengan nilai B [EV-090]",
+                "evidence_ids": [
+                  "EV-090"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-088",
+              "EV-090"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-029",
+            "prodi": "Teknik Informatika",
+            "semester": 8,
+            "score": 56.7,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [],
+            "reasons": [
+              {
+                "text": "Mengerjakan proyek Landing Page Himpunan [EV-153]",
+                "evidence_ids": [
+                  "EV-153"
+                ]
+              },
+              {
+                "text": "Terlibat dalam riset Anggota Riset Dosen bidang NLP [EV-155]",
+                "evidence_ids": [
+                  "EV-155"
+                ]
+              }
+            ],
+            "gaps": [],
+            "evidenceIds": [
+              "EV-153",
+              "EV-155"
+            ],
+            "reasonSource": "llm"
+          }
+        ],
+        "invitationDraft": "Yth. [Nama Mahasiswa],\n\nKami sedang menyiapkan riset \"Butuh mahasiswa NLP dan Python untuk riset analisis sentimen\" dan menilai pengalaman Anda relevan. Apakah Anda bersedia berdiskusi minggu ini?\n\nSalam,\nTim Riset (disiapkan Netra, Digital Worker AI)",
+        "budgetWarning": false
+      },
+      "steps": [
+        {
+          "step": "parse",
+          "status": "done",
+          "detail": "Netra memahami brief: topik \"Butuh mahasiswa NLP dan Python untuk riset analisis sentimen\", skill wajib Python, NLP, butuh 3 orang."
+        },
+        {
+          "step": "normalize",
+          "status": "done",
+          "detail": "Netra memetakan 2 skill ke katalog (wajib: Python, NLP)."
+        },
+        {
+          "step": "search",
+          "status": "done",
+          "detail": "Netra menelusuri 83 profil aktif dan menemukan 69 kandidat dengan bukti relevan."
+        },
+        {
+          "step": "score",
+          "status": "done",
+          "detail": "Netra menilai 69 kandidat; skor tertinggi S-031 (68.3)."
+        },
+        {
+          "step": "explain",
+          "status": "done",
+          "detail": "Netra menerima alasan untuk 5 kandidat."
+        },
+        {
+          "step": "verify",
+          "status": "done",
+          "detail": "Netra memeriksa sitasi: 10 alasan siap, 0 dibuang karena ID bukti tidak valid."
+        },
+        {
+          "step": "brief",
+          "status": "done",
+          "detail": "Netra menyiapkan 5 kandidat dan draf undangan. Menunggu persetujuan dosen."
+        }
+      ]
+    },
+    "lowmatch": {
+      "status": "awaiting_approval",
+      "result": {
+        "mode": "v2",
+        "topic": "Butuh mahasiswa Unity, NLP, ESP32 dan Public Speaking untuk riset",
+        "requiredSkills": [
+          "NLP",
+          "ESP32",
+          "Unity",
+          "Public Speaking"
+        ],
+        "niceSkills": [],
+        "unknownSkills": [],
+        "noMatch": true,
+        "candidates": [
+          {
+            "code": "S-074",
+            "prodi": "Teknologi Game",
+            "semester": 4,
+            "score": 42.5,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [
+              "NLP",
+              "ESP32"
+            ],
+            "reasons": [
+              {
+                "text": "Terlibat dalam riset Anggota Riset Dosen bidang Unity [EV-413]",
+                "evidence_ids": [
+                  "EV-413"
+                ]
+              },
+              {
+                "text": "Mengerjakan proyek Pemateri Seminar Teknologi Himpunan [EV-414]",
+                "evidence_ids": [
+                  "EV-414"
+                ]
+              }
+            ],
+            "gaps": [
+              "NLP",
+              "ESP32"
+            ],
+            "evidenceIds": [
+              "EV-413",
+              "EV-414"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-010",
+            "prodi": "Sains Data Terapan",
+            "semester": 6,
+            "score": 34.3,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [
+              "ESP32",
+              "Unity"
+            ],
+            "reasons": [
+              {
+                "text": "Terlibat dalam riset Anggota Riset Dosen bidang NLP [EV-048]",
+                "evidence_ids": [
+                  "EV-048"
+                ]
+              },
+              {
+                "text": "Lulus mata kuliah Metodologi Penelitian dengan nilai A [EV-052]",
+                "evidence_ids": [
+                  "EV-052"
+                ]
+              }
+            ],
+            "gaps": [
+              "ESP32",
+              "Unity"
+            ],
+            "evidenceIds": [
+              "EV-048",
+              "EV-052",
+              "EV-050"
+            ],
+            "reasonSource": "llm"
+          },
+          {
+            "code": "S-007",
+            "prodi": "Teknologi Game",
+            "semester": 8,
+            "score": 33.5,
+            "hiddenTalent": false,
+            "fairExposure": false,
+            "missingSkills": [
+              "NLP",
+              "ESP32"
+            ],
+            "reasons": [
+              {
+                "text": "Lulus mata kuliah Workshop Unity dengan nilai A [EV-035]",
+                "evidence_ids": [
+                  "EV-035"
+                ]
+              },
+              {
+                "text": "Lulus mata kuliah Komunikasi Ilmiah dengan nilai B [EV-033]",
+                "evidence_ids": [
+                  "EV-033"
+                ]
+              }
+            ],
+            "gaps": [
+              "NLP",
+              "ESP32"
+            ],
+            "evidenceIds": [
+              "EV-035",
+              "EV-033",
+              "EV-030"
+            ],
+            "reasonSource": "llm"
+          }
+        ],
+        "invitationDraft": "Yth. [Nama Mahasiswa],\n\nKami sedang menyiapkan riset \"Butuh mahasiswa Unity, NLP, ESP32 dan Public Speaking untuk riset\" dan menilai pengalaman Anda relevan. Apakah Anda bersedia berdiskusi minggu ini?\n\nSalam,\nTim Riset (disiapkan Netra, Digital Worker AI)",
+        "budgetWarning": false
+      },
+      "steps": [
+        {
+          "step": "parse",
+          "status": "done",
+          "detail": "Netra memahami brief: topik \"Butuh mahasiswa Unity, NLP, ESP32 dan Public Speaking untuk riset\", skill wajib NLP, ESP32, Unity, Public Speaking, butuh 3 orang."
+        },
+        {
+          "step": "normalize",
+          "status": "done",
+          "detail": "Netra memetakan 4 skill ke katalog (wajib: NLP, ESP32, Unity, Public Speaking)."
+        },
+        {
+          "step": "search",
+          "status": "done",
+          "detail": "Netra menelusuri 83 profil aktif dan menemukan 64 kandidat dengan bukti relevan."
+        },
+        {
+          "step": "score",
+          "status": "done",
+          "detail": "Netra menilai 64 kandidat; tidak ada yang mencapai skor 50. Menyiapkan 3 kandidat terdekat."
+        },
+        {
+          "step": "explain",
+          "status": "done",
+          "detail": "Netra menerima alasan untuk 3 kandidat."
+        },
+        {
+          "step": "verify",
+          "status": "done",
+          "detail": "Netra memeriksa sitasi: 6 alasan siap, 0 dibuang karena ID bukti tidak valid."
+        },
+        {
+          "step": "brief",
+          "status": "done",
+          "detail": "Netra tidak menemukan kandidat dengan skor ≥ 50; 3 kandidat terdekat disiapkan. Menunggu keputusan dosen."
+        }
+      ]
+    }
+  },
+  "evidence": {
+    "EV-030": {
+      "id": "EV-030",
+      "type": "assistant",
+      "title": "Asisten Praktikum Komunikasi Ilmiah",
+      "detail": "Membantu dosen membimbing praktikum Komunikasi Ilmiah.",
+      "grade": null,
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-007",
+      "skills": [
+        "Public Speaking"
+      ]
+    },
+    "EV-033": {
+      "id": "EV-033",
+      "type": "course",
+      "title": "Komunikasi Ilmiah",
+      "detail": "Mata kuliah Komunikasi Ilmiah semester 4.",
+      "grade": "B",
+      "year": 2023,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-007",
+      "skills": [
+        "Game Dev",
+        "Public Speaking"
+      ]
+    },
+    "EV-035": {
+      "id": "EV-035",
+      "type": "course",
+      "title": "Workshop Unity",
+      "detail": "Mata kuliah Workshop Unity semester 7.",
+      "grade": "A",
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-007",
+      "skills": [
+        "Unity"
+      ]
+    },
+    "EV-048": {
+      "id": "EV-048",
+      "type": "research",
+      "title": "Anggota Riset Dosen bidang NLP",
+      "detail": "Membantu pengumpulan data dan eksperimen riset NLP.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-010",
+      "skills": [
+        "NLP"
+      ]
+    },
+    "EV-050": {
+      "id": "EV-050",
+      "type": "assistant",
+      "title": "Asisten Praktikum Komunikasi Ilmiah",
+      "detail": "Membantu dosen membimbing praktikum Komunikasi Ilmiah.",
+      "grade": null,
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-010",
+      "skills": [
+        "SQL",
+        "Public Speaking"
+      ]
+    },
+    "EV-052": {
+      "id": "EV-052",
+      "type": "course",
+      "title": "Metodologi Penelitian",
+      "detail": "Mata kuliah Metodologi Penelitian semester 1.",
+      "grade": "A",
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-010",
+      "skills": [
+        "NLP",
+        "Research Methods"
+      ]
+    },
+    "EV-069": {
+      "id": "EV-069",
+      "type": "award",
+      "title": "Juara Harapan Lomba Python Antar Kampus",
+      "detail": "Kompetisi bidang Python.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-013",
+      "skills": [
+        "Python"
+      ]
+    },
+    "EV-072": {
+      "id": "EV-072",
+      "type": "project",
+      "title": "Chatbot FAQ Akademik",
+      "detail": "Proyek mata kuliah dengan fokus NLP.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-013",
+      "skills": [
+        "NLP"
+      ]
+    },
+    "EV-073": {
+      "id": "EV-073",
+      "type": "research",
+      "title": "Anggota Riset Dosen bidang NLP",
+      "detail": "Membantu pengumpulan data dan eksperimen riset NLP.",
+      "grade": null,
+      "year": 2023,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-013",
+      "skills": [
+        "NLP"
+      ]
+    },
+    "EV-074": {
+      "id": "EV-074",
+      "type": "assistant",
+      "title": "Asisten Praktikum Pemrograman Python",
+      "detail": "Membantu dosen membimbing praktikum Pemrograman Python.",
+      "grade": null,
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-013",
+      "skills": [
+        "Python"
+      ]
+    },
+    "EV-088": {
+      "id": "EV-088",
+      "type": "project",
+      "title": "Bot Telegram Jadwal Kuliah",
+      "detail": "Proyek mata kuliah dengan fokus Python.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-016",
+      "skills": [
+        "Python"
+      ]
+    },
+    "EV-090": {
+      "id": "EV-090",
+      "type": "course",
+      "title": "Pemrosesan Bahasa Alami",
+      "detail": "Mata kuliah Pemrosesan Bahasa Alami semester 7.",
+      "grade": "B",
+      "year": 2023,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-016",
+      "skills": [
+        "NLP"
+      ]
+    },
+    "EV-146": {
+      "id": "EV-146",
+      "type": "project",
+      "title": "Logger Sensor Kelembapan",
+      "detail": "Proyek pribadi dengan fokus ESP32.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-028",
+      "skills": [
+        "ESP32"
+      ]
+    },
+    "EV-147": {
+      "id": "EV-147",
+      "type": "award",
+      "title": "Juara 3 Lomba IoT Antar Kampus",
+      "detail": "Kompetisi bidang IoT.",
+      "grade": null,
+      "year": 2023,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-028",
+      "skills": [
+        "IoT"
+      ]
+    },
+    "EV-148": {
+      "id": "EV-148",
+      "type": "course",
+      "title": "Workshop Mikrokontroler ESP32",
+      "detail": "Mata kuliah Workshop Mikrokontroler ESP32 semester 6.",
+      "grade": "B",
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-028",
+      "skills": [
+        "Computer Vision",
+        "ESP32"
+      ]
+    },
+    "EV-150": {
+      "id": "EV-150",
+      "type": "assistant",
+      "title": "Asisten Praktikum Internet of Things",
+      "detail": "Membantu dosen membimbing praktikum Internet of Things.",
+      "grade": null,
+      "year": 2023,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-028",
+      "skills": [
+        "IoT"
+      ]
+    },
+    "EV-153": {
+      "id": "EV-153",
+      "type": "project",
+      "title": "Landing Page Himpunan",
+      "detail": "Proyek mata kuliah dengan fokus Web Frontend.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-029",
+      "skills": [
+        "Python",
+        "Web Frontend"
+      ]
+    },
+    "EV-155": {
+      "id": "EV-155",
+      "type": "research",
+      "title": "Anggota Riset Dosen bidang NLP",
+      "detail": "Membantu pengumpulan data dan eksperimen riset NLP.",
+      "grade": null,
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-029",
+      "skills": [
+        "NLP"
+      ]
+    },
+    "EV-166": {
+      "id": "EV-166",
+      "type": "course",
+      "title": "Penulisan Ilmiah",
+      "detail": "Mata kuliah Penulisan Ilmiah semester 2.",
+      "grade": "A",
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-031",
+      "skills": [
+        "Python",
+        "Technical Writing"
+      ]
+    },
+    "EV-167": {
+      "id": "EV-167",
+      "type": "course",
+      "title": "Pemrograman Python",
+      "detail": "Mata kuliah Pemrograman Python semester 3.",
+      "grade": "C",
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-031",
+      "skills": [
+        "Python"
+      ]
+    },
+    "EV-170": {
+      "id": "EV-170",
+      "type": "assistant",
+      "title": "Asisten Praktikum Pemrograman Python",
+      "detail": "Membantu dosen membimbing praktikum Pemrograman Python.",
+      "grade": null,
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-031",
+      "skills": [
+        "Python"
+      ]
+    },
+    "EV-171": {
+      "id": "EV-171",
+      "type": "course",
+      "title": "Pemrosesan Bahasa Alami",
+      "detail": "Mata kuliah Pemrosesan Bahasa Alami semester 2.",
+      "grade": "B",
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-031",
+      "skills": [
+        "NLP"
+      ]
+    },
+    "EV-180": {
+      "id": "EV-180",
+      "type": "project",
+      "title": "Analisis Sentimen Ulasan Aplikasi",
+      "detail": "Proyek mata kuliah dengan fokus NLP.",
+      "grade": null,
+      "year": 2023,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-033",
+      "skills": [
+        "NLP"
+      ]
+    },
+    "EV-182": {
+      "id": "EV-182",
+      "type": "course",
+      "title": "Pemrograman Python",
+      "detail": "Mata kuliah Pemrograman Python semester 7.",
+      "grade": "B",
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-033",
+      "skills": [
+        "Python"
+      ]
+    },
+    "EV-341": {
+      "id": "EV-341",
+      "type": "certificate",
+      "title": "Sertifikat BNSP ESP32",
+      "detail": "Pelatihan daring bidang ESP32.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-060",
+      "skills": [
+        "Computer Vision",
+        "ESP32"
+      ]
+    },
+    "EV-342": {
+      "id": "EV-342",
+      "type": "award",
+      "title": "Juara 3 Lomba IoT Antar Kampus",
+      "detail": "Kompetisi bidang IoT.",
+      "grade": null,
+      "year": 2023,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-060",
+      "skills": [
+        "IoT"
+      ]
+    },
+    "EV-344": {
+      "id": "EV-344",
+      "type": "project",
+      "title": "Saklar Wi-Fi Sederhana",
+      "detail": "Proyek pribadi dengan fokus ESP32.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-060",
+      "skills": [
+        "ESP32",
+        "Cloud"
+      ]
+    },
+    "EV-404": {
+      "id": "EV-404",
+      "type": "research",
+      "title": "Anggota Riset Dosen bidang ESP32",
+      "detail": "Membantu pengumpulan data dan eksperimen riset ESP32.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-073",
+      "skills": [
+        "ESP32"
+      ]
+    },
+    "EV-407": {
+      "id": "EV-407",
+      "type": "course",
+      "title": "Internet of Things",
+      "detail": "Mata kuliah Internet of Things semester 2.",
+      "grade": "B",
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-073",
+      "skills": [
+        "IoT"
+      ]
+    },
+    "EV-408": {
+      "id": "EV-408",
+      "type": "project",
+      "title": "Saklar Wi-Fi Sederhana",
+      "detail": "Proyek pribadi dengan fokus ESP32.",
+      "grade": null,
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-073",
+      "skills": [
+        "ESP32",
+        "Cloud"
+      ]
+    },
+    "EV-410": {
+      "id": "EV-410",
+      "type": "course",
+      "title": "Internet of Things",
+      "detail": "Mata kuliah Internet of Things semester 6.",
+      "grade": "B",
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-073",
+      "skills": [
+        "Python",
+        "IoT"
+      ]
+    },
+    "EV-413": {
+      "id": "EV-413",
+      "type": "research",
+      "title": "Anggota Riset Dosen bidang Unity",
+      "detail": "Membantu pengumpulan data dan eksperimen riset Unity.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-074",
+      "skills": [
+        "Unity",
+        "Project Management"
+      ]
+    },
+    "EV-414": {
+      "id": "EV-414",
+      "type": "project",
+      "title": "Pemateri Seminar Teknologi Himpunan",
+      "detail": "Proyek pribadi dengan fokus Public Speaking.",
+      "grade": null,
+      "year": 2023,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-074",
+      "skills": [
+        "Public Speaking"
+      ]
+    },
+    "EV-417": {
+      "id": "EV-417",
+      "type": "project",
+      "title": "Logger Sensor Kelembapan",
+      "detail": "Proyek pribadi dengan fokus ESP32.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-075",
+      "skills": [
+        "ESP32"
+      ]
+    },
+    "EV-418": {
+      "id": "EV-418",
+      "type": "project",
+      "title": "Lampu Pintar Kos",
+      "detail": "Proyek mata kuliah dengan fokus IoT.",
+      "grade": null,
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-075",
+      "skills": [
+        "IoT"
+      ]
+    },
+    "EV-419": {
+      "id": "EV-419",
+      "type": "award",
+      "title": "Juara Harapan Lomba Embedded C Nasional",
+      "detail": "Kompetisi bidang Embedded C.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-075",
+      "skills": [
+        "IoT",
+        "Embedded C"
+      ]
+    },
+    "EV-420": {
+      "id": "EV-420",
+      "type": "assistant",
+      "title": "Asisten Praktikum Workshop Mikrokontroler ESP32",
+      "detail": "Membantu dosen membimbing praktikum Workshop Mikrokontroler ESP32.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-075",
+      "skills": [
+        "Computer Vision",
+        "ESP32"
+      ]
+    },
+    "EV-449": {
+      "id": "EV-449",
+      "type": "project",
+      "title": "Deteksi Objek Kendaraan dengan YOLOv8",
+      "detail": "Melatih YOLOv8 pada 5.000 citra CCTV lalu lintas Surabaya, mAP 0,81, pipeline Python + OpenCV.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-101",
+      "skills": [
+        "Python",
+        "Computer Vision",
+        "Deep Learning"
+      ]
+    },
+    "EV-450": {
+      "id": "EV-450",
+      "type": "course",
+      "title": "Pengolahan Citra",
+      "detail": "Mata kuliah Pengolahan Citra semester 5.",
+      "grade": "A",
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-101",
+      "skills": [
+        "Computer Vision"
+      ]
+    },
+    "EV-451": {
+      "id": "EV-451",
+      "type": "award",
+      "title": "Juara 2 Lomba Computer Vision Nasional",
+      "detail": "Sistem penghitung kepadatan pejalan kaki dari video.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-101",
+      "skills": [
+        "Python",
+        "Computer Vision"
+      ]
+    },
+    "EV-452": {
+      "id": "EV-452",
+      "type": "course",
+      "title": "Pemrograman Python",
+      "detail": "Mata kuliah Pemrograman Python semester 2.",
+      "grade": "A",
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-101",
+      "skills": [
+        "Python"
+      ]
+    },
+    "EV-453": {
+      "id": "EV-453",
+      "type": "project",
+      "title": "Segmentasi Citra Daun untuk Deteksi Penyakit Tanaman",
+      "detail": "U-Net pada citra daun padi, Python + PyTorch, akurasi 92%.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-102",
+      "skills": [
+        "Python",
+        "Computer Vision",
+        "Deep Learning"
+      ]
+    },
+    "EV-454": {
+      "id": "EV-454",
+      "type": "course",
+      "title": "Pengolahan Citra",
+      "detail": "Mata kuliah Pengolahan Citra semester 5.",
+      "grade": "A",
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-102",
+      "skills": [
+        "Computer Vision"
+      ]
+    },
+    "EV-455": {
+      "id": "EV-455",
+      "type": "research",
+      "title": "Riset Dosen: Pengenalan Wajah untuk Presensi",
+      "detail": "Menyiapkan dataset wajah dan evaluasi model FaceNet.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-102",
+      "skills": [
+        "Python",
+        "Computer Vision",
+        "Research Methods"
+      ]
+    },
+    "EV-456": {
+      "id": "EV-456",
+      "type": "award",
+      "title": "Finalis Gemastik Data Mining",
+      "detail": "Analisis data kemiskinan Jawa Timur.",
+      "grade": null,
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-102",
+      "skills": [
+        "Python",
+        "Data Analysis"
+      ]
+    },
+    "EV-457": {
+      "id": "EV-457",
+      "type": "project",
+      "title": "Penghitung Pengunjung Berbasis Kamera",
+      "detail": "Deteksi dan pelacakan orang dengan OpenCV + Python di Raspberry Pi.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-103",
+      "skills": [
+        "Python",
+        "Computer Vision",
+        "IoT"
+      ]
+    },
+    "EV-458": {
+      "id": "EV-458",
+      "type": "course",
+      "title": "Pengolahan Citra",
+      "detail": "Mata kuliah Pengolahan Citra semester 5.",
+      "grade": "A",
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-103",
+      "skills": [
+        "Computer Vision"
+      ]
+    },
+    "EV-459": {
+      "id": "EV-459",
+      "type": "course",
+      "title": "Pemrograman Python",
+      "detail": "Mata kuliah Pemrograman Python semester 1.",
+      "grade": "A",
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-103",
+      "skills": [
+        "Python"
+      ]
+    },
+    "EV-460": {
+      "id": "EV-460",
+      "type": "award",
+      "title": "Juara 3 Hackathon Smart City",
+      "detail": "Prototipe deteksi parkir liar dari kamera.",
+      "grade": null,
+      "year": 2024,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-103",
+      "skills": [
+        "Computer Vision"
+      ]
+    },
+    "EV-461": {
+      "id": "EV-461",
+      "type": "project",
+      "title": "Pengenalan Plat Nomor Real-time",
+      "detail": "Deteksi plat dan OCR untuk gerbang parkir kampus.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-104",
+      "skills": [
+        "Python",
+        "Computer Vision"
+      ]
+    },
+    "EV-462": {
+      "id": "EV-462",
+      "type": "project",
+      "title": "Deteksi APD Pekerja Proyek dengan Computer Vision",
+      "detail": "Fine-tuning detektor objek untuk helm dan rompi keselamatan.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-104",
+      "skills": [
+        "Python",
+        "Computer Vision",
+        "Deep Learning"
+      ]
+    },
+    "EV-463": {
+      "id": "EV-463",
+      "type": "assistant",
+      "title": "Asisten Praktikum Pengolahan Citra",
+      "detail": "Membimbing praktikum OpenCV dan Python untuk 40 mahasiswa.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-104",
+      "skills": [
+        "Python",
+        "Computer Vision"
+      ]
+    },
+    "EV-468": {
+      "id": "EV-468",
+      "type": "project",
+      "title": "Monitoring Kualitas Udara dengan ESP32",
+      "detail": "Node sensor ESP32 + MQTT ke dashboard, dipasang di 5 titik kampus.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-106",
+      "skills": [
+        "IoT",
+        "Embedded C",
+        "ESP32"
+      ]
+    },
+    "EV-469": {
+      "id": "EV-469",
+      "type": "course",
+      "title": "Sistem Embedded",
+      "detail": "Mata kuliah Sistem Embedded semester 4.",
+      "grade": "A",
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-106",
+      "skills": [
+        "IoT",
+        "Embedded C"
+      ]
+    },
+    "EV-470": {
+      "id": "EV-470",
+      "type": "project",
+      "title": "Smart Farming Berbasis Internet of Things",
+      "detail": "Penyiraman otomatis dengan sensor kelembapan tanah.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-106",
+      "skills": [
+        "Python",
+        "IoT",
+        "ESP32"
+      ]
+    },
+    "EV-476": {
+      "id": "EV-476",
+      "type": "project",
+      "title": "Klasifikasi Sampah dengan CNN",
+      "detail": "Model CNN untuk memilah sampah organik/anorganik dari kamera, Python + TensorFlow.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-109",
+      "skills": [
+        "Python",
+        "Computer Vision",
+        "Deep Learning"
+      ]
+    },
+    "EV-477": {
+      "id": "EV-477",
+      "type": "research",
+      "title": "Riset Dosen: Deteksi Retak Jalan",
+      "detail": "Anotasi dan pelatihan model deteksi retak pada citra jalan.",
+      "grade": null,
+      "year": 2026,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-109",
+      "skills": [
+        "Python",
+        "Computer Vision"
+      ]
+    },
+    "EV-478": {
+      "id": "EV-478",
+      "type": "award",
+      "title": "Juara 1 Lomba Image Processing Regional",
+      "detail": "Sistem klasifikasi kematangan buah.",
+      "grade": null,
+      "year": 2025,
+      "sourceLabel": "Sintetis",
+      "studentCode": "S-109",
+      "skills": [
+        "Computer Vision"
+      ]
+    }
+  }
+}

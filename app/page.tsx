@@ -1,69 +1,114 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { Inbox, Play, TriangleAlert } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
+import { RunList } from "@/components/app/run-list";
+import { TraineeRow, WorkerBadge } from "@/components/app/worker-badge";
+import { ButtonLink } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
+import { EmptyState, ErrorState, LoadingRows, Skeleton } from "@/components/ui/states";
+import { api } from "./_lib/api";
+import { formatPercent } from "./_lib/format";
+import { useApi } from "./_lib/use-api";
+import { DISPLAYED_WORKERS } from "./_lib/worker-profile";
+
+export default function BerandaPage() {
+  const workers = useApi(api.getWorkers);
+  const runs = useApi(api.getRuns);
+
+  const usage = workers.data?.usage;
+  const netra = workers.data?.workers.find((w) => w.id === "netra");
+  // Cakupan MVP: Netra dan Jaya. Data worker lain dari backend tidak ditampilkan.
+  const trainees = workers.data?.workers.filter((w) => w.id !== "netra" && DISPLAYED_WORKERS.includes(w.id)) ?? [];
+  const runList = runs.data?.runs ?? [];
+  const waiting = runList.filter((r) => r.status === "awaiting_approval" || r.status === "needs_clarification");
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <>
+      <PageHeader
+        title="Tim Digital Worker"
+        description="Netra bertugas di LPPM. Beri tugas dalam bahasa sehari-hari, lalu setujui hasilnya sebelum mahasiswa dihubungi."
+      />
+
+      {usage?.warn && (
+        <div role="status" className="mb-5 flex items-start gap-3 rounded-card bg-warning-bg px-5 py-4 text-warning">
+          <TriangleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />
+          <p className="text-[15px]">
+            Pemakaian token sudah {formatPercent(usage.percent)} dari alokasi. Pada 95% Netra berhenti memanggil AI.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      )}
+
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
+        <div className="min-w-0 xl:col-span-8">
+          {workers.status === "error" && <ErrorState message={workers.error} onRetry={workers.reload} />}
+          {workers.status === "loading" && <Skeleton className="h-130 rounded-card bg-surface" />}
+          {netra && usage && <WorkerBadge worker={netra} usage={usage} />}
         </div>
-      </main>
-    </div>
+
+        <Card className="min-w-0 xl:col-span-4">
+          <CardHeader title="Menunggu keputusan Anda" />
+          {runs.status === "loading" && <LoadingRows rows={2} label="Memuat penugasan…" />}
+          {runs.status === "error" && <ErrorState message={runs.error} onRetry={runs.reload} />}
+          {runs.status === "success" &&
+            (waiting.length === 0 ? (
+              <p className="py-4 text-[15px] text-ink-muted">
+                Tidak ada yang menunggu. Hasil Netra akan muncul di sini untuk Anda setujui.
+              </p>
+            ) : (
+              <RunList runs={waiting} showNextStep />
+            ))}
+        </Card>
+      </div>
+
+      <div className="mt-10 grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
+        <section aria-labelledby="judul-riwayat" className="min-w-0 xl:col-span-8">
+          <h2 id="judul-riwayat" className="text-xl leading-7 font-semibold">
+            Riwayat penugasan
+          </h2>
+          <p className="mt-1 text-[15px] text-ink-muted">
+            Setiap penugasan tersimpan beserta jejak kerja dan buktinya.
+          </p>
+          <Card className="mt-4">
+            {runs.status === "loading" && <LoadingRows rows={4} label="Memuat riwayat…" />}
+            {runs.status === "error" && <ErrorState message={runs.error} onRetry={runs.reload} />}
+            {runs.status === "success" &&
+              (runList.length === 0 ? (
+                <EmptyState
+                  icon={Inbox}
+                  title="Belum ada penugasan"
+                  description="Tulis kebutuhan riset Anda. Netra menyiapkan shortlist berbukti dalam kurang dari satu menit."
+                  action={
+                    <ButtonLink href="/tasks/new">
+                      <Play aria-hidden className="size-4" />
+                      Tugaskan Netra
+                    </ButtonLink>
+                  }
+                />
+              ) : (
+                <RunList runs={runList} />
+              ))}
+          </Card>
+        </section>
+
+        <section aria-labelledby="judul-pelatihan" className="min-w-0 xl:col-span-4">
+          <h2 id="judul-pelatihan" className="text-xl leading-7 font-semibold">
+            Dalam pelatihan
+          </h2>
+          <p className="mt-1 text-[15px] text-ink-muted">Satu mesin dan satu alokasi token dengan Netra.</p>
+          <Card className="mt-4 py-1">
+            {workers.status === "success" ? (
+              <ul className="divide-y divide-line">
+                {trainees.map((w) => (
+                  <TraineeRow key={w.id} worker={w} />
+                ))}
+              </ul>
+            ) : (
+              <LoadingRows rows={2} label="Memuat worker…" />
+            )}
+          </Card>
+        </section>
+      </div>
+    </>
   );
 }
