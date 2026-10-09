@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { callLLM, type CallLLMResult } from "../llm";
 import type { Criteria } from "../types";
-import { findSkillsInText } from "./normalize";
+import { findSkillsInText, getSkillCatalog } from "./normalize";
 
 export const CriteriaSchema = z.object({
   needs_clarification: z.boolean().default(false),
@@ -16,6 +16,8 @@ export const CriteriaSchema = z.object({
 const SYSTEM = `Kamu adalah Research Talent Officer. Ubah permintaan dosen menjadi JSON sesuai skema.
 Jika permintaan tidak menyebut topik atau skill yang konkret, isi needs_clarification=true
 dan tulis satu pertanyaan singkat. Jangan menebak skill yang tidak disebut.
+Jika skill yang disebut sama artinya dengan salah satu nama di KATALOG, tulis persis nama katalog itu
+(contoh: "web developer" -> "Web Frontend" atau "Backend"; "pengolahan citra" -> "Computer Vision").
 Jawab hanya dengan JSON, tanpa teks lain.
 
 SKEMA: {
@@ -61,7 +63,7 @@ export async function parseBrief(runId: number, brief: string): Promise<CallLLMR
     step: "parse",
     model: process.env.CBN_MODEL_PARSE || "qwen3.8-flash",
     messages: [
-      { role: "system", content: SYSTEM },
+      { role: "system", content: `${SYSTEM}\n\nKATALOG: ${getSkillCatalog().skills.map((sk) => sk.name).join(", ")}` },
       { role: "user", content: brief },
     ],
     schema: CriteriaSchema,

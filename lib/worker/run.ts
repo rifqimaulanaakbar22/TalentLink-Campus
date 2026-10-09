@@ -310,7 +310,11 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     };
     q().setResult.run(JSON.stringify(result), "awaiting_approval", nowIso(), runId);
     steps.done(
-      result.noMatch
+      candidates.length === 0
+        ? `${name} belum menemukan mahasiswa dengan bukti untuk skill yang diminta` +
+            (norm.unknownSkills.length ? ` (${norm.unknownSkills.join(", ")} belum ada di katalog skill)` : "") +
+            ". Coba ubah kebutuhan dengan skill lain."
+        : result.noMatch
         ? `${name} tidak menemukan kandidat dengan skor ≥ ${NO_MATCH_THRESHOLD}; ${candidates.length} kandidat terdekat disiapkan. Menunggu keputusan dosen.`
         : `${name} menyiapkan ${candidates.length} kandidat dan draf undangan. Menunggu persetujuan dosen.`,
     );
