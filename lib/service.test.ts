@@ -50,7 +50,7 @@ const ledgerCalls = (runId: number) =>
 beforeEach(() => {
   delete process.env.LLM_MOCK_SCENARIO;
   process.env.LLM_MOCK = "true";
-  seedDatabase(getSqlite());
+  seedDatabase(getSqlite(), { resetLedger: true });
 });
 
 describe("POST /api/runs", () => {
@@ -275,5 +275,24 @@ describe("endpoint baca", () => {
     approveRun(id, { decision: "approved", candidateCodes: ["S-101"], messageDraft: "x" });
     sendInvitation(id);
     expect(count()).toEqual(before);
+  });
+});
+
+describe("seed", () => {
+  it("mempertahankan token_ledger agar budget CBN tetap jujur; --reset-ledger mengosongkannya", async () => {
+    const id = await runBrief(CV_BRIEF);
+    const db = getSqlite();
+    db.prepare("UPDATE token_ledger SET input_tokens = 100, output_tokens = 50 WHERE run_id = ?").run(id);
+    const total = () => (db.prepare("SELECT COALESCE(SUM(input_tokens + output_tokens), 0) AS n FROM token_ledger").get() as { n: number }).n;
+    const before = total();
+    expect(before).toBeGreaterThan(0);
+
+    seedDatabase(db);
+    expect(total()).toBe(before);
+    expect(getWorkers().usage.total).toBe(before);
+    expect(listRuns().runs).toEqual([]);
+
+    seedDatabase(db, { resetLedger: true });
+    expect(total()).toBe(0);
   });
 });

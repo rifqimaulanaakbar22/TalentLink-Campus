@@ -88,8 +88,15 @@ type LinkRow = { evidenceId: string; skillId: number; strength: number };
 
 export const SEED_TABLES = ["students", "skills", "evidence", "evidence_skills", "runs", "run_steps", "token_ledger", "approvals"] as const;
 
-/** Hapus semua data lalu isi ulang. Hasil selalu sama karena PRNG ber-seed tetap. */
-export function seedDatabase(db: Database.Database): Record<(typeof SEED_TABLES)[number], number> {
+/**
+ * Hapus semua data lalu isi ulang. Hasil selalu sama karena PRNG ber-seed tetap.
+ * token_ledger dipertahankan (tautan ke run diputus) agar pemakaian token CBN yang sudah terjadi
+ * tetap terhitung di budget 10.000.000; `resetLedger` hanya untuk test dan pengembangan.
+ */
+export function seedDatabase(
+  db: Database.Database,
+  opts: { resetLedger?: boolean } = {},
+): Record<(typeof SEED_TABLES)[number], number> {
   const rand = mulberry32(20261009);
   const int = (min: number, max: number) => min + Math.floor(rand() * (max - min + 1));
   const pick = <T>(xs: readonly T[]): T => xs[Math.floor(rand() * xs.length)];
@@ -230,8 +237,10 @@ export function seedDatabase(db: Database.Database): Record<(typeof SEED_TABLES)
 
 
   db.transaction(() => {
+    if (opts.resetLedger) db.prepare("DELETE FROM token_ledger").run();
+    else db.prepare("UPDATE token_ledger SET run_id = NULL WHERE run_id IS NOT NULL").run();
     // Hapus anak sebelum induk (foreign key).
-    for (const t of ["approvals", "token_ledger", "run_steps", "runs", "evidence_skills", "evidence", "skills", "students"]) {
+    for (const t of ["approvals", "run_steps", "runs", "evidence_skills", "evidence", "skills", "students"]) {
       db.prepare(`DELETE FROM ${t}`).run();
     }
     const insSkill = db.prepare("INSERT INTO skills (id, name, aliases) VALUES (?, ?, ?)");
