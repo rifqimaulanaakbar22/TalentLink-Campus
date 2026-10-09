@@ -4,9 +4,9 @@ import Link from "next/link";
 import { Inbox, Play, TriangleAlert } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { RunList } from "@/components/app/run-list";
-import { TeammateRow, TraineeRow, WorkerBadge } from "@/components/app/worker-badge";
+import { WorkerBadge } from "@/components/app/worker-badge";
 import { ButtonLink } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { EmptyState, ErrorState, LoadingRows, Skeleton } from "@/components/ui/states";
 import { api } from "./_lib/api";
 import { formatPercent } from "./_lib/format";
@@ -18,11 +18,9 @@ export default function BerandaPage() {
   const runs = useApi(api.getRuns);
 
   const usage = workers.data?.usage;
-  const netra = workers.data?.workers.find((w) => w.id === "netra");
-  // Cakupan MVP: Netra dan Jaya. Data worker lain dari backend tidak ditampilkan.
-  const others = workers.data?.workers.filter((w) => w.id !== "netra" && DISPLAYED_WORKERS.includes(w.id)) ?? [];
-  const teammates = others.filter((w) => w.status !== "segera_hadir");
-  const trainees = others.filter((w) => w.status === "segera_hadir");
+  // Cakupan MVP: Netra dan Jaya, urut sesuai DISPLAYED_WORKERS. Data worker lain dari backend tidak ditampilkan.
+  const team = DISPLAYED_WORKERS.flatMap((id) => workers.data?.workers.find((w) => w.id === id) ?? []);
+  const teammates = team.filter((w) => w.id !== "netra" && w.status !== "segera_hadir");
   const runList = runs.data?.runs ?? [];
   const waiting = runList.filter((r) => r.status === "awaiting_approval" || r.status === "needs_clarification");
 
@@ -51,37 +49,26 @@ export default function BerandaPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
-        <div className="min-w-0 xl:col-span-8">
-          {workers.status === "error" && <ErrorState message={workers.error} onRetry={workers.reload} />}
-          {workers.status === "loading" && <Skeleton className="h-130 rounded-card bg-surface" />}
-          {netra && usage && <WorkerBadge worker={netra} usage={usage} />}
-        </div>
+      {/* Baris 1: kartu pegawai Netra dan Jaya, lebar dan tinggi sama */}
+      <section aria-label="Kartu pegawai Digital Worker" className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        {workers.status === "error" && (
+          <div className="xl:col-span-2">
+            <ErrorState message={workers.error} onRetry={workers.reload} />
+          </div>
+        )}
+        {workers.status === "loading" &&
+          DISPLAYED_WORKERS.map((id) => <Skeleton key={id} className="h-150 rounded-card bg-surface" />)}
+        {usage && team.map((w) => <WorkerBadge key={w.id} worker={w} usage={usage} />)}
+      </section>
 
-        <Card className="min-w-0 xl:col-span-4">
-          <CardHeader title="Menunggu keputusan Anda" />
-          {runs.status === "loading" && <LoadingRows rows={2} label="Memuat penugasan…" />}
-          {runs.status === "error" && <ErrorState message={runs.error} onRetry={runs.reload} />}
-          {runs.status === "success" &&
-            (waiting.length === 0 ? (
-              <p className="py-4 text-[15px] text-ink-muted">
-                Tidak ada yang menunggu. Hasil kerja Digital Worker akan muncul di sini untuk Anda setujui.
-              </p>
-            ) : (
-              <RunList runs={waiting} showNextStep />
-            ))}
-        </Card>
-      </div>
-
-      <div className="mt-10 grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
-        <section aria-labelledby="judul-riwayat" className="min-w-0 xl:col-span-8">
+      {/* Baris 2: riwayat dan keputusan yang menunggu, porsi 1:1 */}
+      <div className="mt-10 grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <section aria-labelledby="judul-riwayat" className="flex min-w-0 flex-col">
           <h2 id="judul-riwayat" className="text-xl leading-7 font-semibold">
             Riwayat penugasan
           </h2>
-          <p className="mt-1 text-[15px] text-ink-muted">
-            Setiap penugasan tersimpan beserta jejak kerja dan buktinya.
-          </p>
-          <Card className="mt-4">
+          <p className="mt-1 text-[15px] text-ink-muted">Setiap penugasan tersimpan beserta jejak kerja dan buktinya.</p>
+          <Card className="mt-4 flex-1">
             {runs.status === "loading" && <LoadingRows rows={4} label="Memuat riwayat…" />}
             {runs.status === "error" && <ErrorState message={runs.error} onRetry={runs.reload} />}
             {runs.status === "success" &&
@@ -89,38 +76,45 @@ export default function BerandaPage() {
                 <EmptyState
                   icon={Inbox}
                   title="Belum ada penugasan"
-                  description="Tulis kebutuhan riset Anda. Netra menyiapkan shortlist berbukti dalam kurang dari satu menit."
+                  description="Tugaskan Netra untuk mencari anggota riset, atau Jaya untuk menyusun tim lomba. Hasilnya siap dalam kurang dari satu menit."
                   action={
                     <ButtonLink href="/tasks/new">
                       <Play aria-hidden className="size-4" />
-                      Tugaskan Netra
+                      Beri tugas
                     </ButtonLink>
                   }
                 />
               ) : (
-                <RunList runs={runList} />
+                // Daftar panjang digulir di dalam kartu agar tinggi kedua kolom tetap seimbang.
+                <div className="xl:max-h-120 xl:overflow-y-auto xl:pr-1">
+                  <RunList runs={runList} />
+                </div>
               ))}
           </Card>
         </section>
 
-        <section aria-labelledby="judul-rekan" className="min-w-0 xl:col-span-4">
-          <h2 id="judul-rekan" className="text-xl leading-7 font-semibold">
-            {teammates.length > 0 ? "Juga bertugas" : "Dalam pelatihan"}
+        <section aria-labelledby="judul-menunggu" className="flex min-w-0 flex-col">
+          <h2 id="judul-menunggu" className="text-xl leading-7 font-semibold">
+            Menunggu keputusan Anda
           </h2>
-          <p className="mt-1 text-[15px] text-ink-muted">Satu mesin dan satu alokasi token dengan Netra.</p>
-          <Card className="mt-4 py-1">
-            {workers.status === "success" ? (
-              <ul className="divide-y divide-line">
-                {teammates.map((w) => (
-                  <TeammateRow key={w.id} worker={w} />
-                ))}
-                {trainees.map((w) => (
-                  <TraineeRow key={w.id} worker={w} />
-                ))}
-              </ul>
-            ) : (
-              <LoadingRows rows={2} label="Memuat worker…" />
-            )}
+          <p className="mt-1 text-[15px] text-ink-muted">
+            Hasil kerja {teammates.length > 0 ? "Netra dan Jaya" : "Netra"} yang perlu Anda setujui atau jawab.
+          </p>
+          <Card className="mt-4 flex-1">
+            {runs.status === "loading" && <LoadingRows rows={2} label="Memuat penugasan…" />}
+            {runs.status === "error" && <ErrorState message={runs.error} onRetry={runs.reload} />}
+            {runs.status === "success" &&
+              (waiting.length === 0 ? (
+                <EmptyState
+                  icon={Inbox}
+                  title="Tidak ada yang menunggu"
+                  description="Hasil kerja Digital Worker akan muncul di sini untuk Anda setujui."
+                />
+              ) : (
+                <div className="xl:max-h-120 xl:overflow-y-auto xl:pr-1">
+                  <RunList runs={waiting} showNextStep />
+                </div>
+              ))}
           </Card>
         </section>
       </div>

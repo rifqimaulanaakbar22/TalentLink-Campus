@@ -20,7 +20,7 @@ function Row({ term, children }: { term: string; children: React.ReactNode }) {
 
 /**
  * Kartu pegawai Digital Worker (konsep CBN: jabatan, penempatan, tingkat kemampuan,
- * knowledge base, hak akses). Satu-satunya elemen mencolok di Beranda.
+ * knowledge base, hak akses). Netra dan Jaya tampil berdampingan di Beranda dengan susunan data yang sama.
  */
 export function WorkerBadge({ worker, usage }: { worker: WorkerCard; usage: TokenUsageView }) {
   const profile = WORKER_PROFILE[worker.id];
@@ -28,40 +28,49 @@ export function WorkerBadge({ worker, usage }: { worker: WorkerCard; usage: Toke
   const levelIndex = LEVELS.findIndex((l) => worker.level_label.startsWith(l.code));
   const level = LEVELS[levelIndex] ?? LEVELS[1];
   const busy = worker.status === "bekerja";
+  const training = worker.status === "segera_hadir";
+  const share = usage.budget > 0 ? (worker.tokensUsed / usage.budget) * 100 : 0;
 
   return (
     <section
       aria-labelledby={`nama-${worker.id}`}
-      className="grid overflow-hidden rounded-card bg-surface shadow-card md:grid-cols-[260px_1fr]"
+      className="flex h-full flex-col overflow-hidden rounded-card bg-surface shadow-card"
     >
-      {/* Sisi identitas, seperti kartu pegawai */}
-      <div className="pattern-circuit flex flex-col items-center bg-brand-600 px-6 py-8 text-center text-white">
+      {/* Pita identitas, seperti kartu pegawai */}
+      <div className="pattern-circuit flex flex-wrap items-center gap-x-5 gap-y-4 bg-brand-600 px-6 py-6 text-white sm:px-8">
         <span className="rounded-full bg-white p-1.5">
-          <Mascot workerId={worker.id} size={104} className="ring-0 ring-offset-0" />
+          <Mascot workerId={worker.id} size={76} className="ring-0 ring-offset-0" />
         </span>
-        <h2 id={`nama-${worker.id}`} className="mt-5 text-[28px] leading-8 font-semibold">
-          {worker.nama}
-        </h2>
-        <p className="mt-1 text-[15px] text-white/90">{worker.jabatan}</p>
-        <p className="mt-3 font-mono text-[13px] text-white/80">{profile.employeeId}</p>
-        <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[13px] font-medium text-brand-700">
-          {busy ? (
-            <>
-              <LoaderCircle aria-hidden className="size-3.5 animate-spin" />
-              Sedang mengerjakan tugas
-            </>
-          ) : (
-            <>
-              <span aria-hidden className="size-2 rounded-full bg-success" />
-              Bertugas, siap menerima tugas
-            </>
-          )}
-        </span>
-        <p className="mt-auto pt-6 text-xs text-white/80">Digital Worker (AI), bukan staf manusia</p>
+        <div className="min-w-0 flex-1">
+          <h2 id={`nama-${worker.id}`} className="text-[28px] leading-8 font-semibold">
+            {worker.nama}
+          </h2>
+          <p className="mt-0.5 text-[15px] text-white/90">{worker.jabatan}</p>
+          <p className="mt-1 font-mono text-[13px] text-white/80">{profile.employeeId}</p>
+          <p className="mt-0.5 text-xs text-white/80">Digital Worker (AI), bukan staf manusia</p>
+          <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[13px] font-medium text-brand-700">
+            {training ? (
+              <>
+                <span aria-hidden className="size-2 rounded-full bg-ink-muted" />
+                Dalam pelatihan
+              </>
+            ) : busy ? (
+              <>
+                <LoaderCircle aria-hidden className="size-3.5 animate-spin" />
+                Sedang mengerjakan tugas
+              </>
+            ) : (
+              <>
+                <span aria-hidden className="size-2 rounded-full bg-success" />
+                Bertugas, siap menerima tugas
+              </>
+            )}
+          </span>
+        </div>
       </div>
 
-      {/* Sisi profil kerja */}
-      <div className="flex flex-col px-6 py-5 sm:px-8">
+      {/* Profil kerja */}
+      <div className="flex flex-1 flex-col px-6 py-5 sm:px-8">
         <p className="rounded-field rounded-tl-sm bg-panel px-4 py-3 text-[15px] leading-5.5">“{worker.salam}”</p>
 
         <dl className="mt-2 divide-y divide-line">
@@ -107,16 +116,16 @@ export function WorkerBadge({ worker, usage }: { worker: WorkerCard; usage: Toke
             </span>
           </Row>
           <Row term="Pemakaian token">
-            <span className="font-mono">{formatNumber(usage.total)}</span> dari{" "}
-            <span className="font-mono">{formatNumber(usage.budget)}</span> token alokasi CBN
+            <span className="font-mono">{formatNumber(worker.tokensUsed)}</span> token dipakai {worker.nama}
             <ProgressBar
-              value={usage.percent}
-              label="Pemakaian token aplikasi"
+              value={share}
+              label={`Pemakaian token ${worker.nama} dari alokasi aplikasi`}
               tone={usage.stop ? "danger" : usage.warn ? "warning" : "brand"}
               className="mt-2"
             />
             <span className="mt-1 block text-[13px] text-ink-muted">
-              {formatPercent(usage.percent, 2)} terpakai, dicatat per langkah di Token Ledger.{" "}
+              Total aplikasi <span className="font-mono">{formatNumber(usage.total)}</span> dari{" "}
+              <span className="font-mono">{formatNumber(usage.budget)}</span> token ({formatPercent(usage.percent, 2)}).{" "}
               <Link href="/tokens" className="font-medium text-brand-700 hover:underline">
                 Buka Neraca Token
               </Link>
@@ -125,10 +134,16 @@ export function WorkerBadge({ worker, usage }: { worker: WorkerCard; usage: Toke
         </dl>
 
         <div className="mt-auto flex flex-wrap gap-2 pt-5">
-          <ButtonLink href={`/tasks/new?worker=${worker.id}`} size="lg">
-            <Play aria-hidden className="size-4" />
-            Tugaskan {worker.nama}
-          </ButtonLink>
+          {training ? (
+            <p className="text-[13px] text-ink-muted">
+              {worker.nama} belum bisa diberi tugas sampai lulus uji ketepatan.
+            </p>
+          ) : (
+            <ButtonLink href={`/tasks/new?worker=${worker.id}`} size="lg">
+              <Play aria-hidden className="size-4" />
+              Tugaskan {worker.nama}
+            </ButtonLink>
+          )}
           {worker.activeRunId !== null && (
             <ButtonLink href={`/runs/${worker.activeRunId}`} variant="secondary" size="lg">
               Lihat tugas yang berjalan

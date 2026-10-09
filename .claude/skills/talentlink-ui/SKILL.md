@@ -101,7 +101,7 @@ Profil kerja (ID pegawai, knowledge base, akses, siklus hidup) ada di `app/_lib/
 
 ## Arahan dari skill frontend-design
 
-- Satu elemen mencolok per layar: kartu pegawai Netra di Beranda, kartu "Cara Netra bekerja" di Tugaskan. Elemen lain tenang.
+- Satu elemen mencolok per layar: di Beranda, kartu pegawai Netra dan Jaya berdampingan dengan lebar, tinggi, dan susunan data yang sama (keputusan tim, 10 Oktober 2026); di Tugaskan, kartu "Cara … bekerja". Elemen lain tenang.
 - Jangan menyambung metadata dengan titik tengah ("A · B · C"). Pakai jarak antar item atau kalimat dengan koma.
 - Font mono hanya untuk ID bukti, kode mahasiswa, ID pegawai, skor, dan jumlah token. Bukan untuk label kecil lain.
 - Jangan pakai stat tile angka besar sebagai pola bawaan. Tulis temuan sebagai kalimat jika lebih jelas.
