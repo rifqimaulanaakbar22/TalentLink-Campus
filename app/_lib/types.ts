@@ -132,3 +132,6 @@ export type ScorecardResponse =
       v2: ScorecardModeSummary;
       cases: { id: string; title: string; mode: RunMode; pass: boolean; note: string }[];
     };
+
+// Neraca Token dan Jalur Hemat: langsung dari kontrak (import type dari lib/ diizinkan, kontrak bagian 2).
+export type { TokenModeStats, TokenReport, TokenStepStats } from "@/lib/api-types";
