@@ -103,8 +103,10 @@ function open(): Database.Database {
     fs.mkdirSync(path.dirname(path.resolve(/*turbopackIgnore: true*/ DATABASE_PATH)), { recursive: true });
   }
   const conn = new Database(DATABASE_PATH);
-  conn.pragma("journal_mode = WAL");
-  conn.pragma("synchronous = NORMAL");
+  // Mode jurnal DELETE, bukan WAL: server dev, CLI, dan seed sering membuka file yang sama.
+  // Di mode WAL, proses yang menutup koneksi bisa menghapus -wal/-shm yang masih dipakai server
+  // sehingga server gagal dengan "database disk image is malformed". Untuk skala MVP tidak ada beda kinerja.
+  conn.pragma("journal_mode = DELETE");
   conn.pragma("foreign_keys = ON");
   conn.pragma("busy_timeout = 5000");
   conn.exec(DDL);
