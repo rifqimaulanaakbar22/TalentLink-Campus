@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bot, LoaderCircle, OctagonX, Play } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Bot, LoaderCircle, Lock, OctagonX, Play } from "lucide-react";
+import { Badge, SimulasiBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { TextAreaField } from "@/components/ui/field";
 import { ErrorState } from "@/components/ui/states";
 import { api, USE_MOCK } from "@/app/_lib/api";
@@ -61,8 +61,10 @@ export function TaskForm({ workerId = "netra" }: { workerId?: WorkerId }) {
   }
 
   return (
-    <form onSubmit={submit} className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12" noValidate>
-      <Card className="min-w-0 lg:col-span-8">
+    // Layar lebar: dua kolom 7:5 yang berakhir di garis bawah yang sama.
+    // Layar sedang: form selebar penuh, lalu dua kartu penjelasan berdampingan 1:1.
+    <form onSubmit={submit} className="grid grid-cols-1 gap-5 xl:grid-cols-12" noValidate>
+      <Card className="flex min-w-0 flex-col xl:col-span-7">
         <div className="flex items-start gap-3">
           <Mascot workerId={worker.id} size={48} />
           <div className="rounded-field rounded-tl-sm bg-panel px-4 py-3">
@@ -130,20 +132,22 @@ export function TaskForm({ workerId = "netra" }: { workerId?: WorkerId }) {
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-line pt-6">
-          <Button type="submit" size="lg" disabled={submitting || stopped}>
-            {submitting ? (
-              <LoaderCircle aria-hidden className="size-5 animate-spin" />
-            ) : (
-              <Play aria-hidden className="size-5" />
-            )}
-            {submitting ? copy.submitting : copy.submit}
-          </Button>
-          <p className="text-[13px] text-ink-muted">{copy.eta}</p>
+        <div className="mt-auto pt-6">
+          <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
+            <Button type="submit" size="lg" disabled={submitting || stopped}>
+              {submitting ? (
+                <LoaderCircle aria-hidden className="size-5 animate-spin" />
+              ) : (
+                <Play aria-hidden className="size-5" />
+              )}
+              {submitting ? copy.submitting : copy.submit}
+            </Button>
+            <p className="text-[13px] text-ink-muted">{copy.eta}</p>
+          </div>
         </div>
       </Card>
 
-      <div className="min-w-0 space-y-5 lg:col-span-4">
+      <div className="grid min-w-0 gap-5 md:grid-cols-2 xl:col-span-5 xl:flex xl:flex-col">
         <Card variant="feature">
           <h2 className="text-lg font-semibold">Cara {worker.nama} bekerja</h2>
           <ol className="mt-4 space-y-3 text-[13px] leading-4.5">
@@ -156,6 +160,30 @@ export function TaskForm({ workerId = "netra" }: { workerId?: WorkerId }) {
               </li>
             ))}
           </ol>
+        </Card>
+
+        <Card className="flex flex-1 flex-col">
+          <CardHeader title="Yang akan Anda terima" description={`Hasil kerja ${worker.nama} untuk Anda periksa sebelum memutuskan.`} />
+          <ul className="space-y-4">
+            {copy.deliverables.map(({ icon: Icon, title, text }) => (
+              <li key={title} className="flex gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-panel text-brand-600">
+                  <Icon aria-hidden className="size-4.5" />
+                </span>
+                <span>
+                  <span className="block text-[15px] font-medium">{title}</span>
+                  <span className="block text-[13px] leading-4.5 text-ink-muted">{text}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-auto pt-5">
+            <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
+              <Lock aria-hidden className="size-4 text-ink-muted" />
+              <p className="flex-1 text-[13px] leading-4.5 text-ink-muted">Tidak ada pesan yang terkirim tanpa persetujuan Anda.</p>
+              <SimulasiBadge />
+            </div>
+          </div>
         </Card>
 
         {USE_MOCK && workerId === "netra" && (

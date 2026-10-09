@@ -1,4 +1,5 @@
 // Teks UI per Digital Worker. Komponen dan gaya sama untuk semua worker; hanya isi kalimatnya yang berbeda.
+import { ListChecks, Mail, Sparkles, SquareMousePointer, TriangleAlert, Users, type LucideIcon } from "lucide-react";
 import type { StepName, WorkerId } from "./types";
 
 export const WORKER_NAME: Record<WorkerId, string> = { netra: "Netra", jaya: "Jaya", kanca: "Kanca" };
@@ -49,6 +50,13 @@ pengembang backend untuk menerima data sensor, dan satu orang yang mendesain ant
   },
 ];
 
+/** Satu jenis hasil kerja yang diterima pemberi tugas. */
+export interface Deliverable {
+  icon: LucideIcon;
+  title: string;
+  text: string;
+}
+
 export interface FormCopy {
   pageTitle: string;
   pageDescription: string;
@@ -66,6 +74,8 @@ export interface FormCopy {
   eta: string;
   /** Pilihan Jalur Hemat atau Jalur Pembanding (v1) hanya untuk Netra. */
   allowCompare: boolean;
+  /** Isi kartu "Yang akan Anda terima" di samping form. */
+  deliverables: Deliverable[];
   /** Alasan worker tanpa pilihan jalur selalu memakai Jalur Hemat. */
   fixedPathReason?: string;
 }
@@ -95,6 +105,12 @@ export function formCopy(id: WorkerId, researchExamples: string[]): FormCopy {
       submitting: "Menugaskan Jaya…",
       eta: "Usulan tim biasanya siap dalam kurang dari 30 detik.",
       allowCompare: false,
+      deliverables: [
+        { icon: Users, title: "Usulan tim per peran", text: "Setiap peran diisi mahasiswa yang punya bukti, dan tidak ada yang masuk dua tim." },
+        { icon: ListChecks, title: "Daftar yang tersaring", text: "Mahasiswa yang tidak memenuhi syarat lomba tercatat beserta alasan tertulisnya." },
+        { icon: TriangleAlert, title: "Peringatan konflik", text: "Tanda jika mahasiswa baru disetujui untuk riset Netra atau sudah banyak dilibatkan." },
+        { icon: Mail, title: "Draf undangan seleksi", text: "Bisa Anda edit, dan baru terkirim setelah Anda menyetujui." },
+      ],
       fixedPathReason: "Syarat peserta dan susunan tim dihitung di kode; AI hanya membaca guidebook dan menulis alasan.",
     };
   }
@@ -121,6 +137,12 @@ export function formCopy(id: WorkerId, researchExamples: string[]): FormCopy {
     submitting: "Menugaskan Netra…",
     eta: "Link Brief biasanya siap dalam kurang dari 30 detik.",
     allowCompare: true,
+    deliverables: [
+      { icon: ListChecks, title: "Shortlist berskor", text: "Lima kandidat teratas dengan skor 0–100 yang dihitung di kode dari nilai, proyek, dan pengalaman." },
+      { icon: SquareMousePointer, title: "Alasan yang menunjuk bukti", text: "Setiap alasan punya chip ID bukti yang bisa Anda buka untuk melihat sumbernya." },
+      { icon: Sparkles, title: "Hidden Talent dan Fair Exposure", text: "Mahasiswa berpotensi yang belum pernah juara ikut terlihat, dan yang sudah sering dilibatkan diberi tanda." },
+      { icon: Mail, title: "Draf undangan riset", text: "Bisa Anda edit, dan baru terkirim setelah Anda menyetujui." },
+    ],
   };
 }
 
