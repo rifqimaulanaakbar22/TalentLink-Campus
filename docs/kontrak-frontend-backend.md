@@ -229,6 +229,62 @@ export type ScorecardResponse =
 - Chip ID bukti memanggil `GET /api/evidence/:id` dan membuka panel bukti.
 - Endpoint tidak pernah mengubah tabel students dan evidence.
 
+### Tambahan: Competition Matching oleh Jaya (aditif, 9 Oktober 2026 malam)
+
+Perubahan ini **hanya menambah** field opsional. Tipe dan endpoint di atas tetap berlaku, jadi kode yang sudah ada tidak rusak.
+
+- `POST /api/runs` dengan `workerId: "jaya"` dan `brief` berisi **teks guidebook lomba** (15–20.000 karakter). `mode` diabaikan; Jaya selalu memakai jalur hemat (v2). PDF belum didukung.
+- Jaya memakai **7 nama langkah yang sama** dengan Netra, dengan arti berikut. Kalimat `detail` tiap langkah memakai suara Jaya.
+
+| `step` | Arti untuk Jaya |
+| --- | --- |
+| `parse` | Membaca guidebook: nama lomba, jumlah anggota, jumlah tim, syarat semester dan prodi, peran tim |
+| `normalize` | Memetakan skill tiap peran ke katalog |
+| `search` | Eligibility Check: menyaring mahasiswa yang tidak memenuhi syarat, dengan alasan tertulis |
+| `score` | Team Builder: menilai kandidat per peran dan menyusun tim |
+| `explain` | Menulis alasan berbukti per anggota dan draf undangan seleksi |
+| `verify` | Validasi sitasi + Conflict Check |
+| `brief` | Usulan tim siap diputuskan |
+
+- `result.candidates` berisi **semua anggota tim yang diusulkan**, urut per tim lalu per peran. `score` adalah skor peran 0–100. Link Brief, chip bukti, Setujui, dan kirim SIMULASI berlaku sama.
+- Tambahan di `lib/types.ts`:
+
+```ts
+interface ResultCandidate {
+  // ...field yang sudah ada
+  role?: string;   // hanya Jaya: peran di tim, misalnya "Pengembang Model AI"
+  team?: number;   // hanya Jaya: nomor tim, mulai 1
+}
+
+interface RunResult {
+  // ...field yang sudah ada
+  competition?: CompetitionSummary; // hanya ada untuk run Jaya
+}
+
+interface CompetitionSummary {
+  competitionName: string;
+  teamSize: number;
+  teamCount: number;
+  rules: string[];          // syarat yang dipakai, kalimat siap tampil
+  screenedCount: number;    // jumlah mahasiswa yang diperiksa
+  eligibleCount: number;
+  excluded: { code: string; reasons: string[] }[]; // tersaring + alasan tertulis (AC-14)
+  teams: {
+    team: number;
+    members: { code: string; role: string; roleScore: number }[];
+    missingRoles: string[]; // peran yang tidak terisi karena tidak ada kandidat berbukti
+  }[];
+  conflicts: {
+    code: string;
+    kind: "double_team" | "research_invite" | "fair_exposure";
+    message: string;        // kalimat siap tampil
+  }[];
+}
+```
+
+- `kind: "research_invite"` artinya mahasiswa itu baru disetujui dalam penugasan riset Netra. Ini peringatan, bukan pengecualian.
+- `GET /api/worker`: Jaya berstatus `siap` / `bekerja` seperti Netra setelah modul ini di-merge.
+
 ## 5. Mock untuk frontend
 
 Rifqi bekerja tanpa menunggu API dengan cara berikut:

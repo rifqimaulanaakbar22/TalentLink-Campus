@@ -104,6 +104,10 @@ export interface ResultCandidate {
   gaps: string[];
   evidenceIds: string[];
   reasonSource: "llm" | "template";
+  /** Hanya run Jaya: peran di tim. */
+  role?: string;
+  /** Hanya run Jaya: nomor tim, mulai 1. */
+  team?: number;
 }
 
 export interface RunResult {
@@ -116,4 +120,55 @@ export interface RunResult {
   candidates: ResultCandidate[];
   invitationDraft: string;
   budgetWarning: boolean;
+  /** Hanya ada untuk run Jaya (Competition Matching). */
+  competition?: CompetitionSummary;
+}
+
+// ---------- Competition Matching (Jaya) ----------
+
+export interface CompetitionRole {
+  name: string;
+  skills: string[];
+}
+
+/** Hasil parse guidebook lomba. */
+export interface CompetitionCriteria {
+  needs_clarification: boolean;
+  question: string | null;
+  competition_name: string;
+  team_size: number;
+  team_count: number;
+  min_semester: number | null;
+  max_semester: number | null;
+  allowed_prodi: string[];
+  roles: CompetitionRole[];
+}
+
+export interface ExcludedStudent {
+  code: string;
+  reasons: string[];
+}
+
+export interface TeamProposal {
+  team: number;
+  members: { code: string; role: string; roleScore: number }[];
+  missingRoles: string[];
+}
+
+export interface CompetitionConflict {
+  code: string;
+  kind: "double_team" | "research_invite" | "fair_exposure";
+  message: string;
+}
+
+export interface CompetitionSummary {
+  competitionName: string;
+  teamSize: number;
+  teamCount: number;
+  rules: string[];
+  screenedCount: number;
+  eligibleCount: number;
+  excluded: ExcludedStudent[];
+  teams: TeamProposal[];
+  conflicts: CompetitionConflict[];
 }
