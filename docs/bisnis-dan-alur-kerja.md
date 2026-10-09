@@ -169,7 +169,7 @@ Semua angka harga di bawah adalah **hipotesis** yang perlu divalidasi dengan kam
 | Pembeli | Pimpinan kampus; anggaran dari unit (LPPM dan Bagian Kemahasiswaan) |
 | Pengguna harian | Dosen dan staf unit |
 | Bentuk jual | Langganan per Digital Worker per unit per tahun, seperti merekrut satu staf digital |
-| Biaya pemakaian | Alokasi token dari CBN, terlihat per worker di Token Ledger |
+| Biaya pemakaian | Alokasi token dari CBN, dipantau di halaman Neraca Token (terpakai, sisa, per worker, per penugasan) dan dijaga rem anggaran. Jalur Hemat menekan biaya per penugasan |
 | Jalur masuk | Pilot gratis di satu prodi dengan data teranonimkan, lalu perluasan per unit |
 | Saluran | Penjualan enterprise CBN ke kampus; tim TalentLink sebagai mitra solusi |
 
@@ -181,7 +181,7 @@ Semua angka harga di bawah adalah **hipotesis** yang perlu divalidasi dengan kam
 | Dosen | Shortlist yang disetujui tanpa diubah | Tabel persetujuan |
 | Unit kemahasiswaan | Mahasiswa unik yang mendapat kesempatan | Kode mahasiswa yang diundang per semester |
 | Pimpinan | Hidden Talent yang diundang | Kandidat berbadge Hidden Talent yang disetujui |
-| Atasan unit | Biaya AI per penugasan | Token Ledger |
+| Atasan unit | Biaya AI per penugasan dan sisa anggaran | Neraca Token (dari Token Ledger) |
 | CBN | Worker aktif dan pemakaian token per kampus | Data platform |
 
 Ukuran teknis (ketepatan, bukti, biaya, kecepatan) diukur skrip eval dan ditulis ke `eval/results.md`. Halaman Rapor di aplikasi ditunda; ukuran bisnis di atas bisa ditambahkan setelah MVP.
@@ -200,6 +200,7 @@ Ukuran teknis (ketepatan, bukti, biaya, kecepatan) diukur skrip eval dan ditulis
 - **Persetujuan manusia:** tidak ada pesan yang terkirim tanpa persetujuan. Pengiriman di prototipe berlabel SIMULASI.
 - **Akses baca saja:** worker tidak bisa mengubah data akademik.
 - **Jejak audit:** setiap penugasan, langkah, panggilan AI, token, dan keputusan tercatat dengan waktu.
+- **Kendali biaya:** mulai 80% anggaran Jalur Pembanding dikunci; mulai 95% penugasan baru ditahan. Aturan dijalankan di server dan terlihat di Neraca Token.
 - **Privasi dan keadilan:** nama, gender, dan foto tidak dipakai menghitung skor; data mentah tidak dikirim ke AI selain bukti yang relevan.
 - **Ketahanan:** instruksi tersembunyi di data mahasiswa diabaikan; peringkat ditentukan kode.
 - **Consent (roadmap):** mahasiswa menyetujui untuk dihubungi melalui portal profil.
@@ -221,5 +222,5 @@ Ukuran teknis (ketepatan, bukti, biaya, kecepatan) diukur skrip eval dan ditulis
 2. **Tim digital:** perkenalkan Netra seperti pegawai baru, lengkap dengan jabatan, atasan, dan hak aksesnya.
 3. **Demo:** juri memberi topik riset; Netra menyelesaikan penugasan, termasuk menemukan Hidden Talent.
 4. **Kepercayaan:** buka satu bukti; tunjukkan undangan baru terkirim setelah disetujui.
-5. **Hasil uji:** tunjukkan tabel eval v1 vs v2 di slide; Netra tepat memilih dan hemat token.
+5. **Hasil uji:** buka Neraca Token untuk menunjukkan Jalur Hemat lebih hemat daripada Jalur Pembanding pada pemakaian nyata, lalu tabel eval v1 vs v2 di slide untuk ketepatannya.
 6. **Skala:** satu Talent Graph untuk dua unit; Jaya menyusul, dan Kanca untuk Career Center ada di roadmap.

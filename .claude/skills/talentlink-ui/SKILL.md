@@ -27,6 +27,8 @@ Tema diambil dari `design/inspiration/` (dashboard biru langit yang lembut). Nil
 | Kartu pegawai worker | `WorkerBadge`, `TraineeRow` (`components/app/worker-badge.tsx`) |
 | Kerangka aplikasi | `AppShell` (`components/app/app-shell.tsx`); halaman di `BARE_PAGES` (misalnya `/login`) tampil tanpa kerangka |
 | Pengguna yang login | `UserMenu` di bar atas: inisial, nama, peran, tombol Keluar |
+| Pilihan jalur kerja | `PathPicker` (Netra) dan `FixedPath` (Jaya) di `components/app/path-picker.tsx`; teks dan perkiraan di `app/_lib/token-path.ts` |
+| Bagian Neraca Token | `BudgetCard`, `SavingsCard`, `RunTokenBars`, `WorkerShare`, `StepShare` di `components/app/neraca-token.tsx`. Tidak ada bagian "Aturan anggaran" atau kartu simulasi anggaran |
 | Maskot worker | `Mascot` |
 | Status run | `RunStatusBadge` |
 
@@ -68,6 +70,15 @@ Data selalu lewat `app/_lib/api.ts` dan state lewat `useApi` (`app/_lib/use-api.
 - Pesan login gagal selalu "Email atau kata sandi salah." (jangan bocorkan email mana yang terdaftar).
 - Setelah login atau saat sesi berakhir, pakai navigasi penuh agar layout membaca ulang sesi.
 
+## Neraca Token dan Jalur Hemat
+
+- Halaman `/tokens`. Satu elemen mencolok: kartu Anggaran token (`Card variant="feature"`). Kartu lain tenang.
+- Status anggaran dari `budgetStatus()`: Aman (hijau), Menipis (kuning, 80%), Berhenti (merah, 95%). Banner kuning atau merah selalu menyertakan tautan ke Neraca Token.
+- Warna jalur di grafik: Jalur Hemat `bg-brand-500`, Jalur Pembanding `bg-ink-subtle`. Jangan memakai warna status untuk jalur.
+- Angka token selalu `font-mono` dengan `formatNumber`. Tulis temuan sebagai kalimat ("Jalur Hemat memakai 80% lebih sedikit token…"), bukan stat tile.
+- Kartu jalur yang dikunci memakai `disabled` pada radio dan badge "Dikunci"; jangan menyembunyikan pilihannya.
+- Kartu grafik di samping kolom kartu kecil memakai `flex flex-col` dan grid tanpa `items-start`, dengan area grafik `flex-1`, agar tingginya seimbang dan tidak menyisakan ruang kosong.
+
 ## Bahasa bisnis (mengikuti konsep CBN Digital Worker)
 
 Pakai istilah ini di UI, bukan istilah sistem:
@@ -77,7 +88,8 @@ Pakai istilah ini di UI, bukan istilah sistem:
 | run | penugasan |
 | Run Timeline | Jejak kerja Netra |
 | Scorecard | Ditunda dari UI MVP. Jika dikembalikan: "Rapor Netra", hasil ditulis sebagai pertanyaan ya/belum |
-| mode v2 / v1 | mode hemat token / mode pembanding |
+| mode v2 / v1 | Jalur Hemat / Jalur Pembanding (`PATH_COPY` di `app/_lib/token-path.ts`) |
+| token usage, budget | Neraca Token, anggaran token, sisa anggaran |
 | unit, melapor_ke | penempatan, atasan ("LPPM, melapor ke Kepala LPPM") |
 | level | tingkat kemampuan (L1 Asisten, L2 Analis, L3 Koordinator) |
 | data yang dibaca worker | knowledge base |
