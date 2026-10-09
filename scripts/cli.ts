@@ -1,7 +1,7 @@
 // npm run cli -- "brief" [--mode v1|v2]
 // npm run cli -- --worker jaya --file guidebook.txt   (atau --sample ai-nasional | iot-smart-campus)
 import fs from "node:fs";
-import { getSqlite } from "../lib/db";
+import { getDb } from "../lib/db";
 import { getTokenUsage, isMock } from "../lib/llm";
 import type { RunMode, RunResult } from "../lib/types";
 import { createRun } from "../lib/worker/run";
@@ -41,8 +41,8 @@ async function main() {
     process.exit(1);
   }
 
-  const db = getSqlite();
-  const runId = createRun({ workerId: worker, brief, mode });
+  const db = await getDb();
+  const runId = await createRun({ workerId: worker, brief, mode });
   console.log(`Run #${runId} · ${worker} · mode ${worker === "jaya" ? "v2" : mode}${isMock() ? " · LLM_MOCK" : ""}`);
   console.log(`Brief: ${brief.length > 300 ? `${brief.slice(0, 300)}…` : brief}\n`);
 
@@ -50,14 +50,14 @@ async function main() {
   const status = await runWorker(runId);
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
-  const steps = db
-    .prepare("SELECT step, status, started_at, ended_at, detail FROM run_steps WHERE run_id = ? ORDER BY id")
-    .all(runId) as { step: string; status: string; started_at: string; ended_at: string | null; detail: string }[];
-  const tokens = db
-    .prepare(
-      "SELECT step, model, input_tokens AS i, output_tokens AS o, latency_ms AS ms, is_estimate AS est FROM token_ledger WHERE run_id = ? ORDER BY id",
-    )
-    .all(runId) as { step: string; model: string; i: number; o: number; ms: number; est: number }[];
+  const steps = await db.all<{ step: string; status: string; started_at: string; ended_at: string | null; detail: string }>(
+    "SELECT step, status, started_at, ended_at, detail FROM run_steps WHERE run_id = ? ORDER BY id",
+    runId,
+  );
+  const tokens = await db.all<{ step: string; model: string; i: number; o: number; ms: number; est: number }>(
+    "SELECT step, model, input_tokens AS i, output_tokens AS o, latency_ms AS ms, is_estimate AS est FROM token_ledger WHERE run_id = ? ORDER BY id",
+    runId,
+  );
 
   console.log("Run Timeline");
   for (const s of steps) {
@@ -65,12 +65,12 @@ async function main() {
     console.log(`  [${pad(s.status, 7)}] ${pad(s.step, 9)} ${String(ms).padStart(6)} ms  ${s.detail ?? ""}`);
   }
 
-  const run = db.prepare("SELECT status, result_json, error_message, criteria_json FROM runs WHERE id = ?").get(runId) as {
+  const run = (await db.get<{
     status: string;
     result_json: string | null;
     error_message: string | null;
     criteria_json: string | null;
-  };
+  }>("SELECT status, result_json, error_message, criteria_json FROM runs WHERE id = ?", runId))!;
 
   console.log(`\nStatus: ${status} (${elapsed} detik)`);
   if (status === "failed") console.log(`Error: ${run.error_message}`);
@@ -119,7 +119,7 @@ async function main() {
   for (const t of tokens) {
     console.log(`  ${pad(t.step, 8)} ${pad(t.model, 18)} in ${t.i}  out ${t.o}  ${t.ms} ms${t.est ? "  (estimasi)" : ""}`);
   }
-  const usage = getTokenUsage();
+  const usage = await getTokenUsage();
   console.log(`  Total run ini: ${runTotal} token · ${tokens.length} panggilan LLM`);
   console.log(`  Total aplikasi: ${usage.total.toLocaleString("id-ID")} / ${usage.budget.toLocaleString("id-ID")} (${usage.percent}%)${usage.warn ? " — PERINGATAN budget" : ""}`);
 }

@@ -5,7 +5,7 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from "node:crypto";
 import { z } from "zod";
 import { AUTH_MSG, ROLE_LABEL, SESSION_COOKIE, type AuthUser, type UserRole } from "./auth-types";
-import { getSqlite, nowIso } from "./db";
+import { getDb, nowIso } from "./db";
 import { ApiError, firstIssue } from "./service";
 
 export { AUTH_MSG, SESSION_COOKIE };
@@ -76,15 +76,21 @@ const toAuthUser = (u: Pick<UserRow, "id" | "email" | "name" | "role">): AuthUse
 let demoReady: Promise<void> | null = null;
 
 /** Buat akun demo jika belum ada. Aman dipanggil berulang. */
-export function ensureDemoUsers(): Promise<void> {
-  const db = getSqlite();
-  const missing = DEMO_ACCOUNTS.filter((a) => !db.prepare("SELECT 1 FROM users WHERE email = ?").get(a.email));
-  if (missing.length === 0) return Promise.resolve();
+export async function ensureDemoUsers(): Promise<void> {
+  const db = await getDb();
+  const existing = new Set(
+    (await db.all<{ email: string }>("SELECT email FROM users WHERE email IN (SELECT value FROM json_each(?))",
+      JSON.stringify(DEMO_ACCOUNTS.map((a) => a.email)))).map((r) => r.email),
+  );
+  const missing = DEMO_ACCOUNTS.filter((a) => !existing.has(a.email));
+  if (missing.length === 0) return;
   demoReady ??= (async () => {
-    const insert = db.prepare(
-      "INSERT OR IGNORE INTO users (email, name, role, password_hash, created_at) VALUES (?, ?, ?, ?, ?)",
-    );
-    for (const a of missing) insert.run(a.email, a.name, a.role, await hashPassword(DEMO_PASSWORD), nowIso());
+    for (const a of missing) {
+      await db.run(
+        "INSERT OR IGNORE INTO users (email, name, role, password_hash, created_at) VALUES (?, ?, ?, ?, ?)",
+        a.email, a.name, a.role, await hashPassword(DEMO_PASSWORD), nowIso(),
+      );
+    }
   })().finally(() => {
     demoReady = null;
   });
@@ -117,10 +123,8 @@ export async function authenticate(body: unknown): Promise<{ user: AuthUser; tok
   const { email, password } = parsed.data;
 
   await ensureDemoUsers();
-  const db = getSqlite();
-  const row = db
-    .prepare("SELECT id, email, name, role, password_hash FROM users WHERE email = ?")
-    .get(email) as UserRow | undefined;
+  const db = await getDb();
+  const row = await db.get<UserRow>("SELECT id, email, name, role, password_hash FROM users WHERE email = ?", email);
 
   const ok = await verifyPassword(password, row?.password_hash ?? (await getDummyHash()));
   if (!row || !ok) throw new ApiError(401, AUTH_MSG.invalid);
@@ -128,15 +132,16 @@ export async function authenticate(body: unknown): Promise<{ user: AuthUser; tok
   const token = randomBytes(32).toString("base64url");
   const now = Date.now();
   const expiresAt = new Date(now + SESSION_TTL_MS);
-  db.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").run(
-    hashToken(token),
-    row.id,
-    new Date(now).toISOString(),
-    expiresAt.toISOString(),
-  );
-  db.prepare("UPDATE users SET last_login_at = ? WHERE id = ?").run(new Date(now).toISOString(), row.id);
-  // Bersihkan sesi kedaluwarsa milik siapa pun; tabelnya kecil.
-  db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(new Date(now).toISOString());
+  const nowText = new Date(now).toISOString();
+  // Satu kali jalan ke database: buat sesi, catat waktu login, dan bersihkan sesi kedaluwarsa (tabelnya kecil).
+  await db.batch([
+    {
+      sql: "INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+      args: [hashToken(token), row.id, nowText, expiresAt.toISOString()],
+    },
+    { sql: "UPDATE users SET last_login_at = ? WHERE id = ?", args: [nowText, row.id] },
+    { sql: "DELETE FROM sessions WHERE expires_at <= ?", args: [nowText] },
+  ]);
 
   return { user: toAuthUser(row), token, expiresAt };
 }
@@ -144,26 +149,25 @@ export async function authenticate(body: unknown): Promise<{ user: AuthUser; tok
 // ---------- Sesi ----------
 
 /** Pengguna pemilik token, atau null jika token kosong, tidak dikenal, atau kedaluwarsa. */
-export function getUserBySessionToken(token: string | undefined | null): AuthUser | null {
+export async function getUserBySessionToken(token: string | undefined | null): Promise<AuthUser | null> {
   if (!token) return null;
-  const db = getSqlite();
+  const db = await getDb();
   const id = hashToken(token);
-  const row = db
-    .prepare(
-      `SELECT u.id, u.email, u.name, u.role, s.expires_at
-       FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?`,
-    )
-    .get(id) as (Omit<UserRow, "password_hash"> & { expires_at: string }) | undefined;
+  const row = await db.get<Omit<UserRow, "password_hash"> & { expires_at: string }>(
+    `SELECT u.id, u.email, u.name, u.role, s.expires_at
+     FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?`,
+    id,
+  );
   if (!row) return null;
   if (new Date(row.expires_at).getTime() <= Date.now()) {
-    db.prepare("DELETE FROM sessions WHERE id = ?").run(id);
+    await db.run("DELETE FROM sessions WHERE id = ?", id);
     return null;
   }
   return toAuthUser(row);
 }
 
 /** Logout: hapus sesi di database. Aman dipanggil tanpa token. */
-export function deleteSession(token: string | undefined | null): void {
+export async function deleteSession(token: string | undefined | null): Promise<void> {
   if (!token) return;
-  getSqlite().prepare("DELETE FROM sessions WHERE id = ?").run(hashToken(token));
+  await (await getDb()).run("DELETE FROM sessions WHERE id = ?", hashToken(token));
 }

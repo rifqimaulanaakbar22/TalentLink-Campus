@@ -1,9 +1,9 @@
 // Competition Matching oleh Jaya: parse guidebook -> normalize -> Eligibility Check -> Team Builder
 // -> explain -> verify + Conflict Check -> usulan tim. Memakai 7 nama langkah yang sama dengan Netra.
-import { getSqlite, nowIso } from "../../db";
+import { getDb, nowIso } from "../../db";
 import { LLMError } from "../../llm";
 import type { CompetitionCriteria, CompetitionSummary, ResultCandidate, RunResult, RunStatus, StudentStatus } from "../../types";
-import { getSkillCatalog, resolveSkill } from "../normalize";
+import { getSkillCatalog, loadSkillCatalog, resolveSkill } from "../normalize";
 import { searchCandidates } from "../search";
 import { explainCandidates, type ExplainCandidate } from "../explain";
 import { verifyExplanations, type Explanation } from "../verify";
@@ -16,41 +16,36 @@ import { FAIR_EXPOSURE_MIN_COMMITMENTS, HIDDEN_TALENT_MIN_SCORE, topEvidence } f
 
 const MAX_EVIDENCE = 4;
 
-function sql() {
-  const db = getSqlite();
-  return {
-    getRun: db.prepare("SELECT id, worker_id, brief_text, criteria_json FROM runs WHERE id = ?"),
-    setStatus: db.prepare("UPDATE runs SET status = ?, error_message = ?, updated_at = ? WHERE id = ?"),
-    setCriteria: db.prepare("UPDATE runs SET criteria_json = ?, updated_at = ? WHERE id = ?"),
-    setResult: db.prepare("UPDATE runs SET result_json = ?, status = ?, error_message = NULL, updated_at = ? WHERE id = ?"),
-    students: db.prepare("SELECT code, prodi, semester, status, active_commitments FROM students ORDER BY code"),
-    // Persetujuan riset Netra, untuk Conflict Check lintas unit.
-    researchInvites: db.prepare(
-      `SELECT a.run_id, a.candidate_ids FROM approvals a JOIN runs r ON r.id = a.run_id
+const SQL = {
+  getRun: "SELECT id, worker_id, brief_text, criteria_json FROM runs WHERE id = ?",
+  setStatus: "UPDATE runs SET status = ?, error_message = ?, updated_at = ? WHERE id = ?",
+  setCriteria: "UPDATE runs SET criteria_json = ?, updated_at = ? WHERE id = ?",
+  setResult: "UPDATE runs SET result_json = ?, status = ?, error_message = NULL, updated_at = ? WHERE id = ?",
+  students: "SELECT code, prodi, semester, status, active_commitments FROM students ORDER BY code",
+  // Persetujuan riset Netra, untuk Conflict Check lintas unit.
+  researchInvites: `SELECT a.run_id, a.candidate_ids FROM approvals a JOIN runs r ON r.id = a.run_id
        WHERE r.worker_id = 'netra' AND a.decision = 'approved'`,
-    ),
-  };
-}
-let stmts: ReturnType<typeof sql> | null = null;
-const q = () => (stmts ??= sql());
+} as const;
 
 type StudentRow = { code: string; prodi: string; semester: number; status: StudentStatus; active_commitments: number };
 
 export async function runCompetitionMatching(runId: number): Promise<RunStatus> {
-  const run = q().getRun.get(runId) as { worker_id: string; brief_text: string; criteria_json: string | null } | undefined;
+  const db = await getDb();
+  const run = await db.get<{ worker_id: string; brief_text: string; criteria_json: string | null }>(SQL.getRun, runId);
   if (!run) throw new Error(`Run ${runId} tidak ditemukan`);
   const name = workerName(run.worker_id);
   const steps = new Steps(runId);
-  const setStatus = (s: RunStatus, err: string | null = null) => q().setStatus.run(s, err, nowIso(), runId);
+  const setStatus = (s: RunStatus, err: string | null = null) => db.run(SQL.setStatus, s, err, nowIso(), runId);
   let llmCalls = 0;
   let budgetWarning = false;
 
-  setStatus("running");
+  await setStatus("running");
   try {
+    await loadSkillCatalog();
     // 1. parse guidebook (sekali; hanya explain yang boleh di-retry)
     let criteria = run.criteria_json ? (JSON.parse(run.criteria_json) as CompetitionCriteria) : null;
     if (!criteria || criteria.needs_clarification) {
-      steps.start("parse", `${name} membaca guidebook lomba…`);
+      await steps.start("parse", `${name} membaca guidebook lomba…`);
       let parsed;
       try {
         llmCalls++;
@@ -69,20 +64,20 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
       if ((criteria.needs_clarification || noSkills) && !outOfCatalog) {
         const question = criteria.question || "Berapa jumlah anggota tim dan bidang apa yang dilombakan?";
         criteria = { ...criteria, needs_clarification: true, question };
-        q().setCriteria.run(JSON.stringify(criteria), nowIso(), runId);
-        steps.done(`${name} butuh klarifikasi: ${question}`);
-        setStatus("needs_clarification");
+        await db.run(SQL.setCriteria, JSON.stringify(criteria), nowIso(), runId);
+        await steps.done(`${name} butuh klarifikasi: ${question}`);
+        await setStatus("needs_clarification");
         return "needs_clarification";
       }
-      q().setCriteria.run(JSON.stringify(criteria), nowIso(), runId);
-      steps.done(
+      await db.run(SQL.setCriteria, JSON.stringify(criteria), nowIso(), runId);
+      await steps.done(
         `${name} membaca guidebook "${criteria.competition_name}": tim ${criteria.team_size} orang, ` +
           `${criteria.team_count} tim, ${criteria.roles.length} peran.`,
       );
     }
 
     // 2. normalize: skill peran -> katalog, prodi -> nama resmi
-    steps.start("normalize", `${name} mencocokkan skill tiap peran dengan katalog…`);
+    await steps.start("normalize", `${name} mencocokkan skill tiap peran dengan katalog…`);
     const { names } = getSkillCatalog();
     const unknownSkills: string[] = [];
     const roles: RoleSpec[] = normalizeRoles(
@@ -103,7 +98,7 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
       maxSemester: criteria.max_semester,
       allowedProdi: [...new Set(criteria.allowed_prodi.map(resolveProdi).filter((p): p is NonNullable<typeof p> => !!p))],
     };
-    steps.done(
+    await steps.done(
       `${name} memetakan peran: ` +
         roles.map((r) => `${r.name} (${r.skillIds.map((id) => names[id]).join(", ") || "tanpa skill katalog"})`).join("; ") +
         (unknownSkills.length ? `. Skill tidak dikenal: ${unknownSkills.join(", ")}` : "") +
@@ -120,8 +115,8 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
       const reason = outside.length
         ? `${outside.join(", ")} belum ada di katalog skill kampus`
         : `peran ${emptyRoles.join(", ")} tidak punya skill yang ada di katalog`;
-      for (const st of ["search", "score", "explain", "verify"] as const) steps.skip(st, `Dilewati: ${reason}.`);
-      steps.start("brief", `${name} menyusun usulan tim…`);
+      for (const st of ["search", "score", "explain", "verify"] as const) await steps.skip(st, `Dilewati: ${reason}.`);
+      await steps.start("brief", `${name} menyusun usulan tim…`);
       const result: RunResult = {
         mode: "v2",
         topic: criteria.competition_name,
@@ -144,33 +139,33 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
           conflicts: [],
         },
       };
-      q().setResult.run(JSON.stringify(result), "awaiting_approval", nowIso(), runId);
-      steps.done(`${name} berhenti: ${reason}, jadi belum bisa menyusun tim berbukti. Ubah guidebook atau peran lomba.`);
+      await db.run(SQL.setResult, JSON.stringify(result), "awaiting_approval", nowIso(), runId);
+      await steps.done(`${name} berhenti: ${reason}, jadi belum bisa menyusun tim berbukti. Ubah guidebook atau peran lomba.`);
       return "awaiting_approval";
     }
 
     // 3. search = Eligibility Check + kandidat berbukti (satu query JOIN)
-    steps.start("search", `${name} memeriksa syarat lomba untuk setiap mahasiswa…`);
-    const students = q().students.all() as StudentRow[];
+    await steps.start("search", `${name} memeriksa syarat lomba untuk setiap mahasiswa…`);
+    const students = await db.all<StudentRow>(SQL.students);
     const { eligible, excluded } = checkEligibility(students, rules);
     const eligibleSet = new Set(eligible);
     const allSkillIds = [...new Set(roles.flatMap((r) => r.skillIds))];
-    const candidates = searchCandidates({ requiredSkillIds: allSkillIds, niceSkillIds: [], minSemester: rules.minSemester }).filter(
+    const candidates = (await searchCandidates({ requiredSkillIds: allSkillIds, niceSkillIds: [], minSemester: rules.minSemester })).filter(
       (c) => eligibleSet.has(c.code),
     );
     const countBy = (re: RegExp) => excluded.filter((e) => e.reasons.some((r) => re.test(r))).length;
-    steps.done(
+    await steps.done(
       `${name} memeriksa ${students.length} mahasiswa: ${eligible.length} memenuhi syarat, ${excluded.length} tersaring ` +
         `(tidak aktif ${countBy(/^Berstatus/)}, semester ${countBy(/^Semester/)}, prodi ${countBy(/^Prodi/)}). ` +
         `${candidates.length} mahasiswa yang lolos punya bukti untuk peran lomba ini.`,
     );
 
     // 4. score = Team Builder
-    steps.start("score", `${name} menyusun tim dengan peran yang saling melengkapi…`);
+    await steps.start("score", `${name} menyusun tim dengan peran yang saling melengkapi…`);
     const teams = buildTeams({ candidates, roles, teamSize: criteria.team_size, teamCount: criteria.team_count });
     const memberCount = teams.reduce((n, t) => n + t.members.length, 0);
     const missing = teams.flatMap((t) => t.missingRoles.map((r) => `tim ${t.team}: ${r}`));
-    steps.done(
+    await steps.done(
       memberCount === 0
         ? `${name} belum menemukan mahasiswa yang lolos syarat dengan bukti untuk peran lomba ini.`
         : `${name} menyusun ${teams.length} tim: ` +
@@ -211,23 +206,23 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
 
     let explanation: Explanation | null = null;
     if (explainInput.length === 0) {
-      steps.skip("explain", `${name} tidak punya anggota tim untuk dijelaskan.`);
+      await steps.skip("explain", `${name} tidak punya anggota tim untuk dijelaskan.`);
     } else {
-      steps.start("explain", `${name} menulis alasan berbukti untuk ${explainInput.length} anggota tim…`);
+      await steps.start("explain", `${name} menulis alasan berbukti untuk ${explainInput.length} anggota tim…`);
       try {
         llmCalls++;
         const res = await explainCandidates({ ...explainOpts, candidates: explainInput });
         budgetWarning ||= res.budgetWarning;
         explanation = res.data;
-        steps.done(`${name} menerima alasan untuk ${explanation.candidates.length} anggota tim.`);
+        await steps.done(`${name} menerima alasan untuk ${explanation.candidates.length} anggota tim.`);
       } catch (err) {
         if (!(err instanceof LLMError && err.code === "bad_json")) throw err;
-        steps.done(`${name} menerima jawaban AI yang tidak bisa dibaca; akan dicoba ulang di verifikasi.`);
+        await steps.done(`${name} menerima jawaban AI yang tidak bisa dibaca; akan dicoba ulang di verifikasi.`);
       }
     }
 
     // 6. verify: sitasi + Conflict Check
-    steps.start("verify", `${name} memeriksa sitasi dan konflik penugasan…`);
+    await steps.start("verify", `${name} memeriksa sitasi dan konflik penugasan…`);
     const verified = await verifyExplanations({
       pkg: explainInput.map((c) => ({
         code: c.code,
@@ -254,13 +249,13 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
           : undefined,
     });
     const invites = new Map<string, number[]>();
-    for (const row of q().researchInvites.all() as { run_id: number; candidate_ids: string }[]) {
+    for (const row of await db.all<{ run_id: number; candidate_ids: string }>(SQL.researchInvites)) {
       for (const code of JSON.parse(row.candidate_ids) as string[]) invites.set(code, [...(invites.get(code) ?? []), row.run_id]);
     }
     const commitments = new Map(students.map((s) => [s.code, s.active_commitments]));
     const conflicts = checkConflicts({ teams, commitments, researchInvites: invites });
     const reasonCount = verified.candidates.reduce((n, c) => n + c.reasons.length, 0);
-    steps.done(
+    await steps.done(
       `${name} memeriksa sitasi: ${reasonCount} alasan siap, ${verified.dropped} dibuang karena ID bukti tidak valid` +
         (verified.retried ? ", explain dicoba ulang sekali" : "") +
         (verified.templated.length ? `, alasan template untuk ${verified.templated.join(", ")}` : "") +
@@ -268,7 +263,7 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
     );
 
     // 7. brief = usulan tim
-    steps.start("brief", `${name} menyusun usulan tim…`);
+    await steps.start("brief", `${name} menyusun usulan tim…`);
     const vByCode = new Map(verified.candidates.map((c) => [c.code, c]));
     const resultCandidates: ResultCandidate[] = explainInput.map((c) => {
       const v = vByCode.get(c.code)!;
@@ -312,8 +307,8 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
       budgetWarning,
       competition,
     };
-    q().setResult.run(JSON.stringify(result), "awaiting_approval", nowIso(), runId);
-    steps.done(
+    await db.run(SQL.setResult, JSON.stringify(result), "awaiting_approval", nowIso(), runId);
+    await steps.done(
       memberCount === 0
         ? `${name} belum bisa mengusulkan tim. Coba ubah syarat atau peran lomba.`
         : `${name} mengusulkan ${teams.length} tim (${memberCount} mahasiswa) beserta draf undangan seleksi. Menunggu persetujuan.`,
@@ -321,8 +316,8 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
     return "awaiting_approval";
   } catch (err) {
     const message = err instanceof LLMError ? err.message : `Terjadi kesalahan internal: ${(err as Error).message}`;
-    steps.fail(message);
-    setStatus("failed", message);
+    await steps.fail(message);
+    await setStatus("failed", message);
     return "failed";
   }
 }

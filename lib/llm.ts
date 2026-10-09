@@ -1,7 +1,7 @@
 // Satu-satunya pintu ke LLM (API CBN, gateway LiteLLM kompatibel OpenAI).
 // Setiap panggilan dicatat di token_ledger dan dipotong dari budget aplikasi.
 import type { z } from "zod";
-import { getSqlite, nowIso } from "./db";
+import { getDb, nowIso } from "./db";
 import type { StepName, WorkerId } from "./types";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -58,15 +58,13 @@ export interface TokenUsage {
   byWorker: Record<WorkerId, number>;
 }
 
-export function getTokenUsage(): TokenUsage {
-  const db = getSqlite();
-  const rows = db
-    .prepare(
-      `SELECT r.worker_id AS worker, COALESCE(SUM(t.input_tokens + t.output_tokens), 0) AS n
-       FROM token_ledger t LEFT JOIN runs r ON r.id = t.run_id
-       GROUP BY r.worker_id`,
-    )
-    .all() as { worker: WorkerId | null; n: number }[];
+export async function getTokenUsage(): Promise<TokenUsage> {
+  const db = await getDb();
+  const rows = await db.all<{ worker: WorkerId | null; n: number }>(
+    `SELECT r.worker_id AS worker, COALESCE(SUM(t.input_tokens + t.output_tokens), 0) AS n
+     FROM token_ledger t LEFT JOIN runs r ON r.id = t.run_id
+     GROUP BY r.worker_id`,
+  );
   const byWorker: Record<WorkerId, number> = { netra: 0, jaya: 0, kanca: 0 };
   let total = 0;
   for (const r of rows) {
@@ -77,13 +75,12 @@ export function getTokenUsage(): TokenUsage {
   return { total, budget, percent: Math.round((total / budget) * 1000) / 10, warn: total >= warn, stop: total >= stop, byWorker };
 }
 
-function record(runId: number | null, step: StepName, model: string, u: CallLLMResult<unknown>["usage"]) {
-  getSqlite()
-    .prepare(
-      `INSERT INTO token_ledger (run_id, step, model, input_tokens, output_tokens, latency_ms, is_estimate, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(runId, step, model, u.inputTokens, u.outputTokens, u.latencyMs, u.isEstimate ? 1 : 0, nowIso());
+async function record(runId: number | null, step: StepName, model: string, u: CallLLMResult<unknown>["usage"]) {
+  await (await getDb()).run(
+    `INSERT INTO token_ledger (run_id, step, model, input_tokens, output_tokens, latency_ms, is_estimate, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    runId, step, model, u.inputTokens, u.outputTokens, u.latencyMs, u.isEstimate ? 1 : 0, nowIso(),
+  );
 }
 
 /** Ambil objek JSON dari teks jawaban: buang code fence dan teks di luar kurung kurawal terluar. */
@@ -166,7 +163,7 @@ async function requestOnce(model: string, messages: ChatMessage[]): Promise<ApiR
 export async function callLLM<T>(opts: CallLLMOptions<T>): Promise<CallLLMResult<T>> {
   const { runId, step, model, messages, schema } = opts;
 
-  const budget = getTokenUsage();
+  const budget = await getTokenUsage();
   if (budget.stop) throw new LLMError("budget", "Budget token hampir habis");
 
   const started = Date.now();
@@ -174,7 +171,7 @@ export async function callLLM<T>(opts: CallLLMOptions<T>): Promise<CallLLMResult
   if (isMock()) {
     const text = opts.mock ? opts.mock(process.env.LLM_MOCK_SCENARIO || undefined) : "{}";
     const usage = { inputTokens: 0, outputTokens: 0, isEstimate: false, latencyMs: Date.now() - started };
-    record(runId, step, "mock", usage);
+    await record(runId, step, "mock", usage);
     return { data: parseAndValidate(text, schema), usage, budgetWarning: budget.warn };
   }
 
@@ -202,7 +199,7 @@ export async function callLLM<T>(opts: CallLLMOptions<T>): Promise<CallLLMResult
           latencyMs,
         };
   // Token tetap tercatat walaupun JSON-nya rusak, karena sudah terpakai.
-  record(runId, step, model, usage);
+  await record(runId, step, model, usage);
 
   const budgetWarning = budget.total + usage.inputTokens + usage.outputTokens >= budgetConfig().warn;
   return { data: parseAndValidate(text, schema), usage, budgetWarning };

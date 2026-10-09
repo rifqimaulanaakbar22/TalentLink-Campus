@@ -1,8 +1,8 @@
+// Akses database lewat @libsql/client. Lokal memakai file SQLite (data/talentlink.db);
+// jika TURSO_DATABASE_URL diisi (misalnya di Vercel), memakai Turso. SQL-nya sama karena Turso = SQLite.
 import fs from "node:fs";
 import path from "node:path";
-import Database from "better-sqlite3";
-import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import * as schema from "./schema";
+import { createClient, type Client } from "@libsql/client";
 
 // DDL disimpan di sini agar tabel dibuat otomatis saat database pertama kali dibuka,
 // tanpa langkah migrasi terpisah. Harus selaras dengan lib/schema.ts.
@@ -117,32 +117,85 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 
 export const DATABASE_PATH = process.env.DATABASE_PATH || "data/talentlink.db";
 
-function open(): Database.Database {
-  if (DATABASE_PATH !== ":memory:") {
-    fs.mkdirSync(path.dirname(path.resolve(/*turbopackIgnore: true*/ DATABASE_PATH)), { recursive: true });
-  }
-  const conn = new Database(DATABASE_PATH);
-  // Mode jurnal DELETE, bukan WAL: server dev, CLI, dan seed sering membuka file yang sama.
-  // Di mode WAL, proses yang menutup koneksi bisa menghapus -wal/-shm yang masih dipakai server
-  // sehingga server gagal dengan "database disk image is malformed". Untuk skala MVP tidak ada beda kinerja.
-  conn.pragma("journal_mode = DELETE");
-  conn.pragma("foreign_keys = ON");
-  conn.pragma("busy_timeout = 5000");
-  conn.exec(DDL);
-  return conn;
+function databaseUrl(): string {
+  if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
+  if (DATABASE_PATH === ":memory:") return ":memory:";
+  const file = path.resolve(/*turbopackIgnore: true*/ DATABASE_PATH);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  return `file:${file}`;
 }
 
-// Satu koneksi per proses; disimpan di globalThis agar hot reload Next tidak membuka koneksi baru.
-const g = globalThis as unknown as { __tlSqlite?: Database.Database; __tlDb?: BetterSQLite3Database<typeof schema> };
-
-export function getSqlite(): Database.Database {
-  if (!g.__tlSqlite) g.__tlSqlite = open();
-  return g.__tlSqlite;
+export type Arg = string | number | bigint | boolean | null;
+export type Row = Record<string, unknown>;
+export interface Statement {
+  sql: string;
+  args?: Arg[];
+}
+export interface RunResult {
+  changes: number;
+  lastInsertRowid: number;
 }
 
-export function getDb(): BetterSQLite3Database<typeof schema> {
-  if (!g.__tlDb) g.__tlDb = drizzle(getSqlite(), { schema });
+/** Antarmuka kecil di atas libSQL. Semua method async karena Turso diakses lewat jaringan. */
+export interface Db {
+  get<T = Row>(sql: string, ...args: Arg[]): Promise<T | undefined>;
+  all<T = Row>(sql: string, ...args: Arg[]): Promise<T[]>;
+  run(sql: string, ...args: Arg[]): Promise<RunResult>;
+  /** Beberapa statement dalam satu transaksi tulis (satu kali jalan ke server Turso). */
+  batch(statements: Statement[]): Promise<{ changes: number; rows: Row[] }[]>;
+}
+
+/** Baris libSQL diubah menjadi objek biasa {kolom: nilai}. */
+function plainRows(columns: string[], rows: ArrayLike<unknown>[]): Row[] {
+  return rows.map((r) => Object.fromEntries(columns.map((c, i) => [c, r[i]])));
+}
+
+function wrap(client: Client): Db {
+  return {
+    async get<T>(sql: string, ...args: Arg[]) {
+      const r = await client.execute({ sql, args });
+      return plainRows(r.columns, r.rows)[0] as T | undefined;
+    },
+    async all<T>(sql: string, ...args: Arg[]) {
+      const r = await client.execute({ sql, args });
+      return plainRows(r.columns, r.rows) as T[];
+    },
+    async run(sql: string, ...args: Arg[]) {
+      const r = await client.execute({ sql, args });
+      return { changes: r.rowsAffected, lastInsertRowid: Number(r.lastInsertRowid ?? 0) };
+    },
+    async batch(statements: Statement[]) {
+      const rs = await client.batch(
+        statements.map((s) => ({ sql: s.sql, args: s.args ?? [] })),
+        "write",
+      );
+      return rs.map((r) => ({ changes: r.rowsAffected, rows: plainRows(r.columns, r.rows) }));
+    },
+  };
+}
+
+async function open(): Promise<Db> {
+  const client = createClient({ url: databaseUrl(), authToken: process.env.TURSO_AUTH_TOKEN });
+  // Untuk file lokal: tegakkan foreign key (ON DELETE CASCADE di sessions). Turso mengaturnya sendiri.
+  if (!process.env.TURSO_DATABASE_URL) await client.execute("PRAGMA foreign_keys = ON");
+  await client.executeMultiple(DDL);
+  return wrap(client);
+}
+
+// Satu klien per proses; disimpan di globalThis agar hot reload Next tidak membuka koneksi baru.
+const g = globalThis as unknown as { __tlDb?: Promise<Db> };
+
+export function getDb(): Promise<Db> {
+  g.__tlDb ??= open().catch((err) => {
+    g.__tlDb = undefined; // jangan simpan kegagalan; coba lagi di panggilan berikutnya
+    throw err;
+  });
   return g.__tlDb;
+}
+
+/** Hanya untuk test: tutup dan lupakan koneksi agar database berikutnya dibuka ulang. */
+export function resetDbForTests(): void {
+  g.__tlDb = undefined;
 }
 
 export function nowIso(): string {

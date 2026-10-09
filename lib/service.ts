@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
-import { getSqlite, nowIso } from "./db";
+import { getDb, nowIso } from "./db";
 import { getTokenUsage } from "./llm";
 import workers from "./workers.json";
 import type {
@@ -47,8 +47,8 @@ export const MSG = {
  * Rem anggaran (Neraca Token). Di atas batas berhenti semua penugasan baru ditahan; di atas batas
  * peringatan Jalur Pembanding (v1) dikunci. Jaya selalu memakai Jalur Hemat, jadi tidak ikut dikunci.
  */
-function assertBudget(workerId: string, mode: RunMode) {
-  const usage = getTokenUsage();
+async function assertBudget(workerId: string, mode: RunMode) {
+  const usage = await getTokenUsage();
   if (usage.stop) throw new ApiError(409, MSG.budgetStop);
   if (usage.warn && mode === "v1" && workerId !== "jaya") throw new ApiError(409, MSG.comparisonLocked);
 }
@@ -89,16 +89,11 @@ export const EvidenceIdSchema = z.string().regex(/^EV-\d{1,6}$/, { error: "ID bu
 
 // ---------- Query ----------
 
-function sql() {
-  const db = getSqlite();
-  return {
-    run: db.prepare(
-      `SELECT id, worker_id, mode, brief_text, criteria_json, status, created_at, updated_at, result_json, error_message
+const SQL = {
+    run: `SELECT id, worker_id, mode, brief_text, criteria_json, status, created_at, updated_at, result_json, error_message
        FROM runs WHERE id = ?`,
-    ),
     // Token dihubungkan ke baris langkah lewat nama langkah + rentang waktu, agar retry tidak dihitung dua kali.
-    steps: db.prepare(
-      `SELECT s.id, s.step, s.status, s.started_at, s.ended_at, s.detail,
+    steps: `SELECT s.id, s.step, s.status, s.started_at, s.ended_at, s.detail,
               COALESCE(SUM(t.input_tokens), 0) AS input_tokens,
               COALESCE(SUM(t.output_tokens), 0) AS output_tokens,
               MAX(t.model) AS model,
@@ -110,47 +105,30 @@ function sql() {
        WHERE s.run_id = ?
        GROUP BY s.id
        ORDER BY s.id`,
-    ),
-    runTokens: db.prepare("SELECT COALESCE(SUM(input_tokens + output_tokens), 0) AS n FROM token_ledger WHERE run_id = ?"),
-    lastApproval: db.prepare(
-      `SELECT candidate_ids, decision, decided_by, decided_at, message_draft, sent_at, id
+    runTokens: "SELECT COALESCE(SUM(input_tokens + output_tokens), 0) AS n FROM token_ledger WHERE run_id = ?",
+    lastApproval: `SELECT candidate_ids, decision, decided_by, decided_at, message_draft, sent_at, id
        FROM approvals WHERE run_id = ? ORDER BY id DESC LIMIT 1`,
-    ),
-    list: db.prepare(
-      `SELECT r.id, r.worker_id, r.mode, r.brief_text, r.status, r.created_at, r.error_message,
+    list: `SELECT r.id, r.worker_id, r.mode, r.brief_text, r.status, r.created_at, r.error_message,
               COALESCE(t.n, 0) AS total_tokens
        FROM runs r
        LEFT JOIN (SELECT run_id, SUM(input_tokens + output_tokens) AS n FROM token_ledger GROUP BY run_id) t
          ON t.run_id = r.id
        ORDER BY r.id DESC LIMIT 20`,
-    ),
-    activeRuns: db.prepare(
-      `SELECT worker_id, MAX(id) AS id FROM runs WHERE status IN ('queued', 'running') GROUP BY worker_id`,
-    ),
-    clarify: db.prepare(
-      `UPDATE runs SET brief_text = brief_text || ?, status = 'queued', error_message = NULL, updated_at = ?
+    activeRuns: `SELECT worker_id, MAX(id) AS id FROM runs WHERE status IN ('queued', 'running') GROUP BY worker_id`,
+    clarify: `UPDATE runs SET brief_text = brief_text || ?, status = 'queued', error_message = NULL, updated_at = ?
        WHERE id = ? AND status = 'needs_clarification'`,
-    ),
-    retry: db.prepare(
-      `UPDATE runs SET status = 'queued', error_message = NULL, updated_at = ? WHERE id = ? AND status = 'failed'`,
-    ),
-    decide: db.prepare(`UPDATE runs SET status = ?, updated_at = ? WHERE id = ? AND status = 'awaiting_approval'`),
-    insertApproval: db.prepare(
-      `INSERT INTO approvals (run_id, candidate_ids, decision, decided_by, decided_at, message_draft)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    ),
-    markSent: db.prepare("UPDATE approvals SET sent_at = ? WHERE id = ? AND sent_at IS NULL"),
-    evidence: db.prepare(
-      `SELECT e.id, e.type, e.title, e.detail, e.grade, e.year, e.source_label, s.code AS student_code,
+    retry: `UPDATE runs SET status = 'queued', error_message = NULL, updated_at = ? WHERE id = ? AND status = 'failed'`,
+    decide: `UPDATE runs SET status = ?, updated_at = ? WHERE id = ? AND status = 'awaiting_approval'`,
+    // Dipakai dalam satu batch setelah `decide`: baris hanya masuk jika status run benar-benar berubah.
+    insertApproval: `INSERT INTO approvals (run_id, candidate_ids, decision, decided_by, decided_at, message_draft)
+       SELECT ?, ?, ?, ?, ?, ? WHERE changes() = 1`,
+    markSent: "UPDATE approvals SET sent_at = ? WHERE id = ? AND sent_at IS NULL",
+    evidence: `SELECT e.id, e.type, e.title, e.detail, e.grade, e.year, e.source_label, s.code AS student_code,
               (SELECT json_group_array(k.name) FROM evidence_skills es JOIN skills k ON k.id = es.skill_id
                WHERE es.evidence_id = e.id) AS skills
        FROM evidence e JOIN students s ON s.id = e.student_id
        WHERE e.id = ?`,
-    ),
-  };
-}
-let stmts: ReturnType<typeof sql> | null = null;
-const q = () => (stmts ??= sql());
+} as const;
 
 type RunRow = {
   id: number;
@@ -175,8 +153,8 @@ type ApprovalRow = {
   sent_at: string | null;
 };
 
-function getRunRow(id: number): RunRow {
-  const row = q().run.get(id) as RunRow | undefined;
+async function getRunRow(id: number): Promise<RunRow> {
+  const row = await (await getDb()).get<RunRow>(SQL.run, id);
   if (!row) throw new ApiError(404, MSG.notFound);
   return row;
 }
@@ -194,10 +172,11 @@ function toApprovalView(a: ApprovalRow): ApprovalView {
 
 // ---------- Endpoint ----------
 
-export function getWorkers(): WorkerResponse {
-  const usage = getTokenUsage();
+export async function getWorkers(): Promise<WorkerResponse> {
+  const db = await getDb();
+  const usage = await getTokenUsage();
   const active = new Map(
-    (q().activeRuns.all() as { worker_id: WorkerId; id: number }[]).map((r) => [r.worker_id, r.id]),
+    (await db.all<{ worker_id: WorkerId; id: number }>(SQL.activeRuns)).map((r) => [r.worker_id, r.id]),
   );
   const cards: WorkerCard[] = workers.map((w) => {
     const id = w.id as WorkerId;
@@ -227,7 +206,7 @@ export function getWorkers(): WorkerResponse {
 }
 
 /** Buat run berstatus queued. Pipeline dijalankan pemanggil di background. */
-export function createRunFromBody(body: unknown): CreateRunResponse {
+export async function createRunFromBody(body: unknown): Promise<CreateRunResponse> {
   const parsed = CreateRunSchema.safeParse(body);
   if (!parsed.success) throw new ApiError(400, firstIssue(parsed.error));
   const { workerId, brief, mode } = parsed.data;
@@ -235,12 +214,14 @@ export function createRunFromBody(body: unknown): CreateRunResponse {
   if (!worker || worker.status_rilis !== "aktif") throw new ApiError(400, MSG.comingSoon);
   // Guidebook lomba (Jaya) boleh panjang; brief riset (Netra) cukup 4.000 karakter.
   if (workerId !== "jaya" && brief.length > 4000) throw new ApiError(400, "Brief terlalu panjang, maksimal 4.000 karakter.");
-  assertBudget(workerId, mode);
-  return { runId: createRun({ workerId, brief, mode }) };
+  await assertBudget(workerId, mode);
+  return { runId: await createRun({ workerId, brief, mode }) };
 }
 
-export function listRuns(): RunListResponse {
-  const rows = q().list.all() as (Omit<RunRow, "criteria_json" | "updated_at" | "result_json"> & { total_tokens: number })[];
+export async function listRuns(): Promise<RunListResponse> {
+  const rows = await (await getDb()).all<Omit<RunRow, "criteria_json" | "updated_at" | "result_json"> & { total_tokens: number }>(
+    SQL.list,
+  );
   const runs: RunSummary[] = rows.map((r) => ({
     id: r.id,
     workerId: r.worker_id,
@@ -254,9 +235,10 @@ export function listRuns(): RunListResponse {
   return { runs };
 }
 
-export function getRunDetail(id: number): RunDetailResponse {
-  const run = getRunRow(id);
-  const stepRows = q().steps.all(id) as {
+export async function getRunDetail(id: number): Promise<RunDetailResponse> {
+  const db = await getDb();
+  const run = await getRunRow(id);
+  const stepRows = (await db.all(SQL.steps, id)) as {
     id: number;
     step: StepName;
     status: StepStatus;
@@ -282,7 +264,7 @@ export function getRunDetail(id: number): RunDetailResponse {
     isEstimate: s.is_estimate === 1,
   }));
   const result = run.result_json ? (JSON.parse(run.result_json) as RunResult) : null;
-  const approval = q().lastApproval.get(id) as ApprovalRow | undefined;
+  const approval = await db.get<ApprovalRow>(SQL.lastApproval, id);
   const criteria = run.criteria_json ? (JSON.parse(run.criteria_json) as Criteria) : null;
 
   return {
@@ -298,27 +280,28 @@ export function getRunDetail(id: number): RunDetailResponse {
       clarificationQuestion: run.status === "needs_clarification" ? (criteria?.question ?? null) : null,
     },
     steps,
-    totalTokens: (q().runTokens.get(id) as { n: number }).n,
+    totalTokens: (await db.get<{ n: number }>(SQL.runTokens, id))!.n,
     result,
     approval: approval ? toApprovalView(approval) : null,
-    budgetWarning: Boolean(result?.budgetWarning) || getTokenUsage().warn,
+    budgetWarning: Boolean(result?.budgetWarning) || (await getTokenUsage()).warn,
   };
 }
 
 /** Gabungkan jawaban ke brief dan antrekan ulang run. Format penanda dipakai frontend untuk memecah brief. */
-export function clarifyRun(id: number, body: unknown): { runId: number; status: "queued" } {
+export async function clarifyRun(id: number, body: unknown): Promise<{ runId: number; status: "queued" }> {
   const parsed = ClarifySchema.safeParse(body);
   if (!parsed.success) throw new ApiError(400, firstIssue(parsed.error));
-  getRunRow(id);
-  const changed = q().clarify.run(`\n\nJawaban klarifikasi: ${parsed.data.answer}`, nowIso(), id).changes;
+  await getRunRow(id);
+  const db = await getDb();
+  const changed = (await db.run(SQL.clarify, `\n\nJawaban klarifikasi: ${parsed.data.answer}`, nowIso(), id)).changes;
   if (changed !== 1) throw new ApiError(409, MSG.notClarifying);
   return { runId: id, status: "queued" };
 }
 
-export function approveRun(id: number, body: unknown, decidedBy = "Dosen pemberi tugas"): ApprovalView {
+export async function approveRun(id: number, body: unknown, decidedBy = "Dosen pemberi tugas"): Promise<ApprovalView> {
   const parsed = ApproveSchema.safeParse(body);
   if (!parsed.success) throw new ApiError(400, firstIssue(parsed.error));
-  const run = getRunRow(id);
+  const run = await getRunRow(id);
   if (run.status !== "awaiting_approval") throw new ApiError(409, MSG.notAwaiting);
 
   const { decision, messageDraft } = parsed.data;
@@ -328,36 +311,39 @@ export function approveRun(id: number, body: unknown, decidedBy = "Dosen pemberi
   if (outside.length) throw new ApiError(400, `Kandidat ${outside.join(", ")} tidak ada di Link Brief penugasan ini.`);
   if (decision === "approved" && codes.length === 0) throw new ApiError(400, "Pilih minimal satu kandidat untuk disetujui.");
 
-  const db = getSqlite();
+  const db = await getDb();
   const now = nowIso();
-  db.transaction(() => {
-    if (q().decide.run(decision, now, id).changes !== 1) throw new ApiError(409, MSG.notAwaiting);
-    q().insertApproval.run(id, JSON.stringify(codes), decision, decidedBy, now, messageDraft);
-  })();
-  return toApprovalView(q().lastApproval.get(id) as ApprovalRow);
+  // Atomik: ubah status dan catat approval dalam satu transaksi; dua klik bersamaan tidak membuat dua approval.
+  const [decided] = await db.batch([
+    { sql: SQL.decide, args: [decision, now, id] },
+    { sql: SQL.insertApproval, args: [id, JSON.stringify(codes), decision, decidedBy, now, messageDraft] },
+  ]);
+  if (decided.changes !== 1) throw new ApiError(409, MSG.notAwaiting);
+  return toApprovalView((await db.get<ApprovalRow>(SQL.lastApproval, id))!);
 }
 
 /** Kirim undangan SIMULASI: tidak ada email/WA yang benar-benar terkirim. */
-export function sendInvitation(id: number): SendResponse {
-  getRunRow(id);
-  const approval = q().lastApproval.get(id) as ApprovalRow | undefined;
+export async function sendInvitation(id: number): Promise<SendResponse> {
+  await getRunRow(id);
+  const db = await getDb();
+  const approval = await db.get<ApprovalRow>(SQL.lastApproval, id);
   if (!approval || approval.decision !== "approved") throw new ApiError(403, MSG.needApproval);
   if (approval.sent_at) return { sentAt: approval.sent_at, label: "SIMULASI" };
   const sentAt = nowIso();
-  q().markSent.run(sentAt, approval.id);
+  await db.run(SQL.markSent, sentAt, approval.id);
   return { sentAt, label: "SIMULASI" };
 }
 
-export function retryRun(id: number): { runId: number; status: "queued" } {
-  const run = getRunRow(id);
+export async function retryRun(id: number): Promise<{ runId: number; status: "queued" }> {
+  const run = await getRunRow(id);
   if (run.status !== "failed") throw new ApiError(409, MSG.notFailed);
-  assertBudget(run.worker_id, run.mode);
-  if (q().retry.run(nowIso(), id).changes !== 1) throw new ApiError(409, MSG.notFailed);
+  await assertBudget(run.worker_id, run.mode);
+  if ((await (await getDb()).run(SQL.retry, nowIso(), id)).changes !== 1) throw new ApiError(409, MSG.notFailed);
   return { runId: id, status: "queued" };
 }
 
-export function getEvidence(id: string): EvidenceDetail {
-  const row = q().evidence.get(id) as
+export async function getEvidence(id: string): Promise<EvidenceDetail> {
+  const row = (await (await getDb()).get(SQL.evidence, id)) as
     | {
         id: string;
         type: EvidenceDetail["type"];

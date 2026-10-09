@@ -1,5 +1,4 @@
-import type Database from "better-sqlite3";
-import { getSqlite } from "../db";
+import { getDb } from "../db";
 import type { Candidate, Evidence, EvidenceType, Grade } from "../types";
 
 type Row = {
@@ -50,20 +49,7 @@ JOIN evidence_skills es ON es.evidence_id = e.id
 WHERE s.code IN (SELECT value FROM json_each(?))
 ORDER BY s.code, e.id, es.skill_id`;
 
-const stmts = new WeakMap<Database.Database, { search: Database.Statement; all: Database.Statement; active: Database.Statement }>();
-function prepared() {
-  const db = getSqlite();
-  let s = stmts.get(db);
-  if (!s) {
-    s = {
-      search: db.prepare(SEARCH_SQL),
-      all: db.prepare(ALL_EVIDENCE_SQL),
-      active: db.prepare("SELECT count(*) AS n FROM students WHERE status = 'aktif'"),
-    };
-    stmts.set(db, s);
-  }
-  return s;
-}
+const ACTIVE_SQL = "SELECT count(*) AS n FROM students WHERE status = 'aktif'";
 
 const toEvidence = (r: Omit<Row, "code" | "prodi" | "semester" | "active_commitments" | "has_award">): Evidence => ({
   id: r.ev_id,
@@ -77,17 +63,18 @@ const toEvidence = (r: Omit<Row, "code" | "prodi" | "semester" | "active_commitm
   strength: r.strength,
 });
 
-export function searchCandidates(opts: {
+export async function searchCandidates(opts: {
   requiredSkillIds: number[];
   niceSkillIds: number[];
   minSemester: number | null;
-}): Candidate[] {
+}): Promise<Candidate[]> {
   if (opts.requiredSkillIds.length === 0) return [];
-  const rows = prepared().search.all(
+  const rows = await (await getDb()).all<Row>(
+    SEARCH_SQL,
     opts.minSemester ?? 0,
     JSON.stringify([...opts.requiredSkillIds, ...opts.niceSkillIds]),
     JSON.stringify(opts.requiredSkillIds),
-  ) as Row[];
+  );
 
   const byCode = new Map<string, Candidate>();
   for (const r of rows) {
@@ -108,13 +95,13 @@ export function searchCandidates(opts: {
   return [...byCode.values()];
 }
 
-export function countActiveStudents(): number {
-  return (prepared().active.get() as { n: number }).n;
+export async function countActiveStudents(): Promise<number> {
+  return (await (await getDb()).get<{ n: number }>(ACTIVE_SQL))!.n;
 }
 
 /** Semua bukti per kode mahasiswa (mode v1). */
-export function loadAllEvidence(codes: string[]): Map<string, Evidence[]> {
-  const rows = prepared().all.all(JSON.stringify(codes)) as (Row & { code: string })[];
+export async function loadAllEvidence(codes: string[]): Promise<Map<string, Evidence[]>> {
+  const rows = await (await getDb()).all<Row & { code: string }>(ALL_EVIDENCE_SQL, JSON.stringify(codes));
   const out = new Map<string, Evidence[]>();
   for (const r of rows) {
     const list = out.get(r.code) ?? [];

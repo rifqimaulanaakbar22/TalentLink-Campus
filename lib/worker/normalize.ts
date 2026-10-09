@@ -1,4 +1,4 @@
-import { getSqlite } from "../db";
+import { getDb } from "../db";
 import type { Criteria, NormalizedCriteria, Skill } from "../types";
 
 interface Catalog {
@@ -12,17 +12,22 @@ let cache: Catalog | null = null;
 
 const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9+#]/g, "");
 
-export function getSkillCatalog(): Catalog {
+/** Muat katalog ke memori (sekali per proses). Panggil sebelum fungsi katalog lain di bawah. */
+export async function loadSkillCatalog(): Promise<Catalog> {
   if (cache) return cache;
-  const rows = getSqlite().prepare("SELECT id, name, aliases FROM skills ORDER BY id").all() as {
-    id: number;
-    name: string;
-    aliases: string;
-  }[];
+  const rows = await (await getDb()).all<{ id: number; name: string; aliases: string }>(
+    "SELECT id, name, aliases FROM skills ORDER BY id",
+  );
   const skills = rows.map((r) => ({ id: r.id, name: r.name, aliases: JSON.parse(r.aliases) as string[] }));
   const byKey = new Map<string, number>();
   for (const s of skills) for (const a of [s.name, ...s.aliases]) byKey.set(key(a), s.id);
   cache = { skills, byKey, names: Object.fromEntries(skills.map((s) => [s.id, s.name])) };
+  return cache;
+}
+
+/** Katalog dari memori. Pipeline memanggil loadSkillCatalog() di awal, jadi di sini tinggal dibaca. */
+export function getSkillCatalog(): Catalog {
+  if (!cache) throw new Error("Katalog skill belum dimuat; panggil loadSkillCatalog() lebih dulu.");
   return cache;
 }
 

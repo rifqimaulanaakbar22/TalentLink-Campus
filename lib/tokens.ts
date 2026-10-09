@@ -1,32 +1,23 @@
 // Neraca Token: ringkasan pemakaian token untuk halaman /tokens dan rem anggaran Jalur Hemat.
 // Hanya membaca token_ledger; pencatatan tetap di lib/llm.ts.
-import { getSqlite } from "./db";
+import { getDb } from "./db";
 import { budgetConfig, getTokenUsage } from "./llm";
 import type { TokenModeStats, TokenReport, TokenStepStats } from "./api-types";
 import type { RunMode, StepName } from "./types";
 
-function sql() {
-  const db = getSqlite();
-  return {
+const SQL = {
     // Perbandingan jalur hanya untuk penugasan Netra yang sudah menghasilkan Link Brief:
     // Jaya selalu Jalur Hemat dan brief-nya guidebook panjang, jadi tidak sebanding.
     // Penugasan bertoken 0 (LLM_MOCK) dilewati agar tidak menurunkan rata-rata.
-    byMode: db.prepare(
-      `SELECT r.mode AS mode, COUNT(*) AS runs, SUM(t.n) AS tokens
+    byMode: `SELECT r.mode AS mode, COUNT(*) AS runs, SUM(t.n) AS tokens
        FROM runs r
        JOIN (SELECT run_id, SUM(input_tokens + output_tokens) AS n FROM token_ledger GROUP BY run_id) t
          ON t.run_id = r.id
        WHERE r.worker_id = 'netra' AND r.status IN ('awaiting_approval', 'approved', 'rejected') AND t.n > 0
        GROUP BY r.mode`,
-    ),
-    byStep: db.prepare(
-      `SELECT step, COUNT(*) AS calls, SUM(input_tokens + output_tokens) AS tokens, SUM(is_estimate) AS estimated
+    byStep: `SELECT step, COUNT(*) AS calls, SUM(input_tokens + output_tokens) AS tokens, SUM(is_estimate) AS estimated
        FROM token_ledger GROUP BY step ORDER BY tokens DESC, step`,
-    ),
-  };
-}
-let stmts: ReturnType<typeof sql> | null = null;
-const q = () => (stmts ??= sql());
+} as const;
 
 const emptyMode = (): TokenModeStats => ({ runs: 0, tokens: 0, avgPerRun: 0 });
 
@@ -42,16 +33,17 @@ export function computeSavings(v1: TokenModeStats, v2: TokenModeStats): TokenRep
   };
 }
 
-export function getTokenReport(): TokenReport {
-  const usage = getTokenUsage();
+export async function getTokenReport(): Promise<TokenReport> {
+  const db = await getDb();
+  const usage = await getTokenUsage();
   const { warn, stop } = budgetConfig();
 
   const byMode: Record<RunMode, TokenModeStats> = { v1: emptyMode(), v2: emptyMode() };
-  for (const r of q().byMode.all() as { mode: RunMode; runs: number; tokens: number }[]) {
+  for (const r of await db.all<{ mode: RunMode; runs: number; tokens: number }>(SQL.byMode)) {
     byMode[r.mode] = { runs: r.runs, tokens: r.tokens, avgPerRun: r.runs ? Math.round(r.tokens / r.runs) : 0 };
   }
 
-  const stepRows = q().byStep.all() as { step: StepName; calls: number; tokens: number; estimated: number }[];
+  const stepRows = await db.all<{ step: StepName; calls: number; tokens: number; estimated: number }>(SQL.byStep);
   const byStep: TokenStepStats[] = stepRows.map(({ step, calls, tokens }) => ({ step, calls, tokens }));
   const stopAt = Math.round(stop);
   const assigned = Object.values(usage.byWorker).reduce((n, x) => n + x, 0);

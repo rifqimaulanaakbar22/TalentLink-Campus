@@ -1,5 +1,5 @@
 // Isi ulang database secara deterministik (data Sintetis). Dipakai `npm run seed` dan test API.
-import type Database from "better-sqlite3";
+import type { Db, Statement } from "./db";
 import type { EvidenceType, Grade, StudentStatus } from "./types";
 import { resetSkillCache } from "./worker/normalize";
 import { PRODI } from "./worker/competition/eligibility";
@@ -93,10 +93,10 @@ export const SEED_TABLES = ["students", "skills", "evidence", "evidence_skills",
  * token_ledger dipertahankan (tautan ke run diputus) agar pemakaian token CBN yang sudah terjadi
  * tetap terhitung di budget 10.000.000; `resetLedger` hanya untuk test dan pengembangan.
  */
-export function seedDatabase(
-  db: Database.Database,
+export async function seedDatabase(
+  db: Db,
   opts: { resetLedger?: boolean } = {},
-): Record<(typeof SEED_TABLES)[number], number> {
+): Promise<Record<(typeof SEED_TABLES)[number], number>> {
   const rand = mulberry32(20261009);
   const int = (min: number, max: number) => min + Math.floor(rand() * (max - min + 1));
   const pick = <T>(xs: readonly T[]): T => xs[Math.floor(rand() * xs.length)];
@@ -236,35 +236,39 @@ export function seedDatabase(
   addEvidence(109, { type: "award", title: "Juara 1 Lomba Image Processing Regional", detail: "Sistem klasifikasi kematangan buah.", year: 2025 }, [["Computer Vision", 3]]);
 
 
-  db.transaction(() => {
-    if (opts.resetLedger) db.prepare("DELETE FROM token_ledger").run();
-    else db.prepare("UPDATE token_ledger SET run_id = NULL WHERE run_id IS NOT NULL").run();
+  // Semua tulis dalam satu batch = satu transaksi, dan untuk Turso cukup satu kali jalan ke server.
+  const stmts: Statement[] = [
+    opts.resetLedger
+      ? { sql: "DELETE FROM token_ledger" }
+      : { sql: "UPDATE token_ledger SET run_id = NULL WHERE run_id IS NOT NULL" },
     // Hapus anak sebelum induk (foreign key).
-    for (const t of ["approvals", "run_steps", "runs", "evidence_skills", "evidence", "skills", "students"]) {
-      db.prepare(`DELETE FROM ${t}`).run();
-    }
-    const insSkill = db.prepare("INSERT INTO skills (id, name, aliases) VALUES (?, ?, ?)");
-    SKILLS.forEach((s, i) => insSkill.run(i + 1, s.name, JSON.stringify(s.aliases)));
-
-    const insStudent = db.prepare(
-      "INSERT INTO students (id, code, name, prodi, semester, status, active_commitments) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    );
-    for (const s of students) insStudent.run(s.id, s.code, s.name, s.prodi, s.semester, s.status, s.commitments);
-
-    const insEv = db.prepare(
-      "INSERT INTO evidence (id, student_id, type, title, detail, grade, year, source_label) VALUES (?, ?, ?, ?, ?, ?, ?, 'Sintetis')",
-    );
-    for (const e of evidence) insEv.run(e.id, e.studentId, e.type, e.title, e.detail, e.grade, e.year);
-
+    ...["approvals", "run_steps", "runs", "evidence_skills", "evidence", "skills", "students"].map((t) => ({
+      sql: `DELETE FROM ${t}`,
+    })),
+    ...SKILLS.map((sk, i) => ({
+      sql: "INSERT INTO skills (id, name, aliases) VALUES (?, ?, ?)",
+      args: [i + 1, sk.name, JSON.stringify(sk.aliases)],
+    })),
+    ...students.map((st) => ({
+      sql: "INSERT INTO students (id, code, name, prodi, semester, status, active_commitments) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      args: [st.id, st.code, st.name, st.prodi, st.semester, st.status, st.commitments],
+    })),
+    ...evidence.map((e) => ({
+      sql: "INSERT INTO evidence (id, student_id, type, title, detail, grade, year, source_label) VALUES (?, ?, ?, ?, ?, ?, ?, 'Sintetis')",
+      args: [e.id, e.studentId, e.type, e.title, e.detail, e.grade, e.year],
+    })),
     // Satu bukti bisa tertaut ke skill yang sama dua kali dari pilihan acak; simpan strength tertinggi.
-    const insLink = db.prepare(
-      "INSERT INTO evidence_skills (evidence_id, skill_id, strength) VALUES (?, ?, ?) ON CONFLICT(evidence_id, skill_id) DO UPDATE SET strength = max(strength, excluded.strength)",
-    );
-    for (const l of links) insLink.run(l.evidenceId, l.skillId, l.strength);
-  })();
+    ...links.map((l) => ({
+      sql: "INSERT INTO evidence_skills (evidence_id, skill_id, strength) VALUES (?, ?, ?) ON CONFLICT(evidence_id, skill_id) DO UPDATE SET strength = max(strength, excluded.strength)",
+      args: [l.evidenceId, l.skillId, l.strength],
+    })),
+  ];
+  await db.batch(stmts);
 
   resetSkillCache();
-  return Object.fromEntries(
-    SEED_TABLES.map((t) => [t, (db.prepare(`SELECT count(*) AS n FROM ${t}`).get() as { n: number }).n]),
-  ) as Record<(typeof SEED_TABLES)[number], number>;
+  const counts = await db.batch(SEED_TABLES.map((t) => ({ sql: `SELECT count(*) AS n FROM ${t}` })));
+  return Object.fromEntries(SEED_TABLES.map((t, i) => [t, counts[i].rows[0].n as number])) as Record<
+    (typeof SEED_TABLES)[number],
+    number
+  >;
 }

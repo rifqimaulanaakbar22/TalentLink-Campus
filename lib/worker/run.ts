@@ -1,9 +1,9 @@
-import { getSqlite, nowIso } from "../db";
+import { getDb, nowIso } from "../db";
 import { LLMError } from "../llm";
 import workers from "../workers.json";
 import type { Criteria, Evidence, NormalizedCriteria, ResultCandidate, RunMode, RunResult, RunStatus, StepName } from "../types";
 import { parseBrief } from "./parse";
-import { getSkillCatalog, normalizeCriteria } from "./normalize";
+import { getSkillCatalog, loadSkillCatalog, normalizeCriteria } from "./normalize";
 import { countActiveStudents, loadAllEvidence, searchCandidates } from "./search";
 import { scoreCandidates, topEvidence } from "./score";
 import { explainCandidates, type ExplainCandidate } from "./explain";
@@ -17,31 +17,25 @@ const MAX_EVIDENCE_V2 = 4;
 
 type RunRow = { id: number; worker_id: string; mode: RunMode; brief_text: string; criteria_json: string | null };
 
-function sql() {
-  const db = getSqlite();
-  return {
-    getRun: db.prepare("SELECT id, worker_id, mode, brief_text, criteria_json FROM runs WHERE id = ?"),
-    setStatus: db.prepare("UPDATE runs SET status = ?, error_message = ?, updated_at = ? WHERE id = ?"),
-    setCriteria: db.prepare("UPDATE runs SET criteria_json = ?, updated_at = ? WHERE id = ?"),
-    setResult: db.prepare("UPDATE runs SET result_json = ?, status = ?, error_message = NULL, updated_at = ? WHERE id = ?"),
-    startStep: db.prepare("INSERT INTO run_steps (run_id, step, status, started_at, detail) VALUES (?, ?, 'running', ?, ?)"),
-    endStep: db.prepare("UPDATE run_steps SET status = ?, ended_at = ?, detail = ? WHERE id = ?"),
-    insertRun: db.prepare(
-      `INSERT INTO runs (worker_id, skill, mode, brief_text, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
-    ),
-  };
-}
-let stmts: ReturnType<typeof sql> | null = null;
-const q = () => (stmts ??= sql());
+export const RUN_SQL = {
+  getRun: "SELECT id, worker_id, mode, brief_text, criteria_json FROM runs WHERE id = ?",
+  setStatus: "UPDATE runs SET status = ?, error_message = ?, updated_at = ? WHERE id = ?",
+  setCriteria: "UPDATE runs SET criteria_json = ?, updated_at = ? WHERE id = ?",
+  setResult: "UPDATE runs SET result_json = ?, status = ?, error_message = NULL, updated_at = ? WHERE id = ?",
+  startStep: "INSERT INTO run_steps (run_id, step, status, started_at, detail) VALUES (?, ?, 'running', ?, ?)",
+  endStep: "UPDATE run_steps SET status = ?, ended_at = ?, detail = ? WHERE id = ?",
+  insertRun: `INSERT INTO runs (worker_id, skill, mode, brief_text, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
+} as const;
+const SQL = RUN_SQL;
 
-export function createRun(opts: { workerId?: string; brief: string; mode: RunMode }): number {
+export async function createRun(opts: { workerId?: string; brief: string; mode: RunMode }): Promise<number> {
   const now = nowIso();
   const workerId = opts.workerId ?? "netra";
   const skill = workerId === "jaya" ? "competition" : "research";
   // Jaya selalu memakai jalur hemat (v2).
   const mode = workerId === "jaya" ? "v2" : opts.mode;
-  return Number(q().insertRun.run(workerId, skill, mode, opts.brief, now, now).lastInsertRowid);
+  return (await (await getDb()).run(SQL.insertRun, workerId, skill, mode, opts.brief, now, now)).lastInsertRowid;
 }
 
 export function workerName(id: string): string {
@@ -52,20 +46,24 @@ export function workerName(id: string): string {
 export class Steps {
   current: number | null = null;
   constructor(private runId: number) {}
-  start(step: StepName, detail: string) {
-    this.current = Number(q().startStep.run(this.runId, step, nowIso(), detail).lastInsertRowid);
+  async start(step: StepName, detail: string) {
+    const db = await getDb();
+    this.current = (await db.run(SQL.startStep, this.runId, step, nowIso(), detail)).lastInsertRowid;
   }
-  done(detail: string) {
-    if (this.current !== null) q().endStep.run("done", nowIso(), detail, this.current);
+  async done(detail: string) {
+    if (this.current !== null) await (await getDb()).run(SQL.endStep, "done", nowIso(), detail, this.current);
     this.current = null;
   }
-  skip(step: StepName, detail: string) {
+  async skip(step: StepName, detail: string) {
     const now = nowIso();
-    const id = Number(q().startStep.run(this.runId, step, now, detail).lastInsertRowid);
-    q().endStep.run("skipped", now, detail, id);
+    // Langkah yang dilewati dicatat sekaligus selesai dalam satu kali jalan ke database.
+    await (await getDb()).batch([
+      { sql: SQL.startStep, args: [this.runId, step, now, detail] },
+      { sql: "UPDATE run_steps SET status = 'skipped', ended_at = ? WHERE id = last_insert_rowid()", args: [now] },
+    ]);
   }
-  fail(detail: string) {
-    if (this.current !== null) q().endStep.run("failed", nowIso(), detail, this.current);
+  async fail(detail: string) {
+    if (this.current !== null) await (await getDb()).run(SQL.endStep, "failed", nowIso(), detail, this.current);
     this.current = null;
   }
 }
@@ -85,20 +83,22 @@ const toPackage = (c: ExplainCandidate): PackageCandidate => ({
  * Jika criteria_json sudah tersimpan (retry / setelah klarifikasi dijawab ulang), parse dilewati.
  */
 export async function runResearchMatching(runId: number): Promise<RunStatus> {
-  const run = q().getRun.get(runId) as RunRow | undefined;
+  const db = await getDb();
+  const run = await db.get<RunRow>(SQL.getRun, runId);
   if (!run) throw new Error(`Run ${runId} tidak ditemukan`);
   const name = workerName(run.worker_id);
   const steps = new Steps(runId);
-  const setStatus = (s: RunStatus, err: string | null = null) => q().setStatus.run(s, err, nowIso(), runId);
+  const setStatus = (s: RunStatus, err: string | null = null) => db.run(SQL.setStatus, s, err, nowIso(), runId);
   let llmCalls = 0;
   let budgetWarning = false;
 
-  setStatus("running");
+  await setStatus("running");
   try {
+    await loadSkillCatalog();
     // 1. parse
     let criteria: Criteria | null = run.criteria_json ? (JSON.parse(run.criteria_json) as Criteria) : null;
     if (!criteria || criteria.needs_clarification) {
-      steps.start("parse", `${name} membaca brief dosen…`);
+      await steps.start("parse", `${name} membaca brief dosen…`);
       // Sesuai skill backend-efisien: hanya explain yang boleh di-retry; parse cukup sekali.
       let parsed;
       try {
@@ -112,18 +112,18 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
       }
       budgetWarning ||= parsed.budgetWarning;
       criteria = parsed.data;
-      q().setCriteria.run(JSON.stringify(criteria), nowIso(), runId);
+      await db.run(SQL.setCriteria, JSON.stringify(criteria), nowIso(), runId);
       const mentionedSkills = criteria.required_skills.length + criteria.nice_skills.length + (criteria.unknown_skills?.length ?? 0);
       // Brief yang menyebut skill (meski di luar katalog) tidak ditanya balik; skill di luar katalog di-cut di normalize.
       if (mentionedSkills === 0 || (criteria.needs_clarification && (criteria.unknown_skills?.length ?? 0) === 0)) {
         const question = criteria.question || "Topik riset atau skill apa yang Bapak/Ibu butuhkan?";
         criteria = { ...criteria, needs_clarification: true, question };
-        q().setCriteria.run(JSON.stringify(criteria), nowIso(), runId);
-        steps.done(`${name} butuh klarifikasi: ${question}`);
-        setStatus("needs_clarification");
+        await db.run(SQL.setCriteria, JSON.stringify(criteria), nowIso(), runId);
+        await steps.done(`${name} butuh klarifikasi: ${question}`);
+        await setStatus("needs_clarification");
         return "needs_clarification";
       }
-      steps.done(
+      await steps.done(
         `${name} memahami brief: topik "${criteria.topic}", skill wajib ${criteria.required_skills.join(", ") || "-"}` +
           (criteria.nice_skills.length ? `, tambahan ${criteria.nice_skills.join(", ")}` : "") +
           (criteria.min_semester ? `, semester ≥ ${criteria.min_semester}` : "") +
@@ -132,7 +132,7 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     }
 
     // 2. normalize
-    steps.start("normalize", `${name} mencocokkan nama skill dengan katalog…`);
+    await steps.start("normalize", `${name} mencocokkan nama skill dengan katalog…`);
     let norm: NormalizedCriteria = normalizeCriteria(criteria);
     if (norm.requiredSkillIds.length === 0 && norm.niceSkillIds.length > 0) {
       // Tanpa skill wajib yang dikenal, skill tambahan dipakai sebagai syarat pencarian.
@@ -141,7 +141,7 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     const { names } = getSkillCatalog();
     const reqNames = norm.requiredSkillIds.map((id) => names[id]);
     const niceNames = norm.niceSkillIds.map((id) => names[id]);
-    steps.done(
+    await steps.done(
       `${name} memetakan ${norm.requiredSkillIds.length + norm.niceSkillIds.length} skill ke katalog` +
         (reqNames.length ? ` (wajib: ${reqNames.join(", ")}${niceNames.length ? `; tambahan: ${niceNames.join(", ")}` : ""})` : "") +
         (norm.unknownSkills.length ? `. Tidak dikenal di katalog: ${norm.unknownSkills.join(", ")}.` : "."),
@@ -152,9 +152,9 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     if (norm.unknownRequired.length > 0) {
       const list = norm.unknownRequired.join(", ");
       for (const s of ["search", "score", "explain", "verify"] as const) {
-        steps.skip(s, `Dilewati: ${list} belum ada di katalog skill kampus.`);
+        await steps.skip(s, `Dilewati: ${list} belum ada di katalog skill kampus.`);
       }
-      steps.start("brief", `${name} menyusun Link Brief…`);
+      await steps.start("brief", `${name} menyusun Link Brief…`);
       const result: RunResult = {
         mode: run.mode,
         topic: norm.topic,
@@ -166,8 +166,8 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
         invitationDraft: "",
         budgetWarning,
       };
-      q().setResult.run(JSON.stringify(result), "awaiting_approval", nowIso(), runId);
-      steps.done(
+      await db.run(SQL.setResult, JSON.stringify(result), "awaiting_approval", nowIso(), runId);
+      await steps.done(
         `${name} berhenti: ${list} belum ada di katalog skill kampus, jadi tidak ada bukti mahasiswa yang bisa dicocokkan. ` +
           `Ubah kebutuhan dengan skill lain.`,
       );
@@ -175,14 +175,14 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     }
 
     // 3. search
-    const active = countActiveStudents();
-    steps.start("search", `${name} menelusuri ${active} profil mahasiswa aktif…`);
-    const found = searchCandidates({
+    const active = await countActiveStudents();
+    await steps.start("search", `${name} menelusuri ${active} profil mahasiswa aktif…`);
+    const found = await searchCandidates({
       requiredSkillIds: norm.requiredSkillIds,
       niceSkillIds: norm.niceSkillIds,
       minSemester: norm.min_semester,
     });
-    steps.done(`${name} menelusuri ${active} profil aktif dan menemukan ${found.length} kandidat dengan bukti relevan.`);
+    await steps.done(`${name} menelusuri ${active} profil aktif dan menemukan ${found.length} kandidat dengan bukti relevan.`);
 
     const relevantIds = [...norm.requiredSkillIds, ...norm.niceSkillIds];
     const missingOf = (ev: Evidence[]) => {
@@ -195,7 +195,7 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     let noMatch = false;
     const flags = new Map<string, { score: number | null; hiddenTalent: boolean; fairExposure: boolean; missing: string[] }>();
     if (run.mode === "v2") {
-      steps.start("score", `${name} menghitung skor ${found.length} kandidat di kode…`);
+      await steps.start("score", `${name} menghitung skor ${found.length} kandidat di kode…`);
       const scored = scoreCandidates(found, { requiredSkillIds: norm.requiredSkillIds, niceSkillIds: norm.niceSkillIds, skillNames: names });
       noMatch = !scored.some((c) => c.score >= NO_MATCH_THRESHOLD);
       const top = scored.slice(0, noMatch ? NO_MATCH_SIZE : SHORTLIST_SIZE);
@@ -210,7 +210,7 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
         missingSkills: c.missingSkills,
         evidence: topEvidence(c.evidence, relevantIds, MAX_EVIDENCE_V2),
       }));
-      steps.done(
+      await steps.done(
         scored.length === 0
           ? `${name} tidak menemukan kandidat untuk dinilai.`
           : noMatch
@@ -218,8 +218,8 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
             : `${name} menilai ${scored.length} kandidat; skor tertinggi ${scored[0].code} (${scored[0].score}).`,
       );
     } else {
-      steps.skip("score", `Mode v1: ${name} tidak menghitung skor; ranking diserahkan ke LLM.`);
-      const all = loadAllEvidence(found.map((c) => c.code));
+      await steps.skip("score", `Mode v1: ${name} tidak menghitung skor; ranking diserahkan ke LLM.`);
+      const all = await loadAllEvidence(found.map((c) => c.code));
       explainInput = found.map((c) => ({
         code: c.code,
         prodi: c.prodi,
@@ -236,9 +236,9 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     // 5. explain
     let explanation: Explanation | null = null;
     if (explainInput.length === 0) {
-      steps.skip("explain", `${name} tidak punya kandidat untuk dijelaskan.`);
+      await steps.skip("explain", `${name} tidak punya kandidat untuk dijelaskan.`);
     } else {
-      steps.start(
+      await steps.start(
         "explain",
         run.mode === "v2"
           ? `${name} menyusun alasan berbukti untuk ${explainInput.length} kandidat teratas…`
@@ -256,10 +256,10 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
         });
         budgetWarning ||= res.budgetWarning;
         explanation = res.data;
-        steps.done(`${name} menerima alasan untuk ${explanation.candidates.length} kandidat.`);
+        await steps.done(`${name} menerima alasan untuk ${explanation.candidates.length} kandidat.`);
       } catch (err) {
         if (!(err instanceof LLMError && err.code === "bad_json")) throw err;
-        steps.done(`${name} menerima jawaban AI yang tidak bisa dibaca; akan dicoba ulang di verifikasi.`);
+        await steps.done(`${name} menerima jawaban AI yang tidak bisa dibaca; akan dicoba ulang di verifikasi.`);
       }
     }
 
@@ -275,7 +275,7 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     }
 
     // 6. verify
-    steps.start("verify", `${name} memeriksa setiap sitasi bukti…`);
+    await steps.start("verify", `${name} memeriksa setiap sitasi bukti…`);
     const verified = await verifyExplanations({
       pkg: pkgCands.map(toPackage),
       explanation,
@@ -303,7 +303,7 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
           : undefined,
     });
     const reasonCount = verified.candidates.reduce((n, c) => n + c.reasons.length, 0);
-    steps.done(
+    await steps.done(
       `${name} memeriksa sitasi: ${reasonCount} alasan siap, ${verified.dropped} dibuang karena ID bukti tidak valid` +
         (verified.retried ? ", explain dicoba ulang sekali" : "") +
         (verified.templated.length ? `, alasan template untuk ${verified.templated.join(", ")}` : "") +
@@ -311,7 +311,7 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     );
 
     // 7. brief
-    steps.start("brief", `${name} menyusun Link Brief…`);
+    await steps.start("brief", `${name} menyusun Link Brief…`);
     const vByCode = new Map(verified.candidates.map((c) => [c.code, c]));
     const candidates: ResultCandidate[] = pkgCands.map((c) => {
       const f = flags.get(c.code)!;
@@ -341,8 +341,8 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
       invitationDraft: verified.invitationDraft?.trim() || defaultInvitation(norm.topic),
       budgetWarning,
     };
-    q().setResult.run(JSON.stringify(result), "awaiting_approval", nowIso(), runId);
-    steps.done(
+    await db.run(SQL.setResult, JSON.stringify(result), "awaiting_approval", nowIso(), runId);
+    await steps.done(
       candidates.length === 0
         ? `${name} belum menemukan mahasiswa dengan bukti untuk skill yang diminta` +
             (norm.unknownSkills.length ? ` (${norm.unknownSkills.join(", ")} belum ada di katalog skill)` : "") +
@@ -354,8 +354,8 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     return "awaiting_approval";
   } catch (err) {
     const message = err instanceof LLMError ? err.message : `Terjadi kesalahan internal: ${(err as Error).message}`;
-    steps.fail(message);
-    setStatus("failed", message);
+    await steps.fail(message);
+    await setStatus("failed", message);
     return "failed";
   }
 }
