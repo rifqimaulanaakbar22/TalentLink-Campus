@@ -1,26 +1,82 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Design tokens TalentLink Campus. Sumber dan alasan: design/tokens.md */
+@theme {
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --color-canvas: #eef0f3;
+  --color-panel: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-line: #e7eaee;
+  --color-ink: #16191d;
+  --color-ink-muted: #5f6773;
+  --color-ink-subtle: #8a94a6;
+
+  --color-brand-50: #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-300: #7dd3fc;
+  --color-brand-500: #1ba8ec;
+  --color-brand-600: #0277b6;
+  --color-brand-700: #036aa3;
+  --color-brand-900: #0c4a6e;
+
+  --color-netra: #4f46e5;
+  --color-jaya: #ea580c;
+
+  --color-success: #067647;
+  --color-success-bg: #dcfae6;
+  --color-danger: #b42318;
+  --color-danger-bg: #fee4e2;
+  --color-warning: #93370d;
+  --color-warning-bg: #fef0c7;
+  --color-simulasi: #713f12;
+  --color-simulasi-bg: #fef08a;
+  --color-sintetis: #374151;
+  --color-sintetis-bg: #e5e7eb;
+  --color-hidden: #075985;
+  --color-hidden-bg: #e0f2fe;
+  --color-fair: #5b21b6;
+  --color-fair-bg: #ede9fe;
+
+  --radius-field: 0.75rem;
+  --radius-card: 1.25rem;
+  --radius-panel: 2rem;
+
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 6px 20px rgb(16 24 40 / 0.04);
+  --shadow-glow: 0 0 0 4px rgb(27 168 236 / 0.1), 0 10px 30px rgb(27 168 236 / 0.12);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Fokus keyboard selalu terlihat */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+/* Pola sirkuit untuk kartu biru penuh (pengganti gradien) */
+.pattern-circuit {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' fill='none' stroke='white' stroke-opacity='.12' stroke-width='1.2'%3E%3Cpath d='M10 20h40l10 10v30M60 60h30l10-10V20M20 100V80l10-10h20M70 110V90h30'/%3E%3Ccircle cx='10' cy='20' r='3'/%3E%3Ccircle cx='100' cy='20' r='3'/%3E%3Ccircle cx='20' cy='100' r='3'/%3E%3Ccircle cx='70' cy='110' r='3'/%3E%3Ccircle cx='100' cy='90' r='3'/%3E%3C/svg%3E");
+  background-position: right -10px bottom -10px;
+  background-repeat: no-repeat;
+  background-size: 190px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
