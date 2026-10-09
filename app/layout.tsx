@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Outfit } from "next/font/google";
-import { NavRail } from "@/components/app/nav";
-import { TopBar } from "@/components/app/top-bar";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { AppShell } from "@/components/app/app-shell";
+import { getCurrentUser } from "@/lib/session";
 import "./globals.css";
 
 const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"] });
@@ -9,10 +11,17 @@ const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["lati
 
 export const metadata: Metadata = {
   title: "TalentLink Campus",
-  description: "Digital Worker AI yang menghubungkan mahasiswa ke riset, lomba, dan karier, dengan bukti.",
+  description: "Digital Worker AI yang menghubungkan mahasiswa ke riset dan lomba, dengan bukti.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Validasi sesi yang sebenarnya (ke database). Proxy hanya memeriksa ada tidaknya cookie.
+  const user = await getCurrentUser();
+  const pathname = (await headers()).get("x-tl-pathname") ?? "";
+  if (!user && pathname !== "/login") {
+    redirect(pathname && pathname !== "/" ? `/login?next=${encodeURIComponent(pathname)}` : "/login");
+  }
+
   return (
     <html lang="id" className={`${outfit.variable} ${jetbrains.variable} antialiased`}>
       <body className="min-h-dvh md:p-5">
@@ -22,16 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Lewati ke konten
         </a>
-        {/* Panel aplikasi putih bersudut besar di atas kanvas abu-abu (inspirasi 03–04) */}
-        <div className="mx-auto flex min-h-dvh max-w-360 bg-panel md:min-h-[calc(100dvh-2.5rem)] md:rounded-panel md:shadow-card">
-          <NavRail />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <TopBar />
-            <main id="konten" className="flex-1 px-4 pb-12 sm:px-8 lg:px-10">
-              {children}
-            </main>
-          </div>
-        </div>
+        <AppShell user={user}>{children}</AppShell>
       </body>
     </html>
   );

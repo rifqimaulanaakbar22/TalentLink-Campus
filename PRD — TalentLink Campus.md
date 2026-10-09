@@ -1,14 +1,16 @@
 # PRD — TalentLink Campus
 
-Oct 9, 2026 · @Someone · **Revisi 9 Oktober 2026 malam** (lihat "Riwayat perubahan" di akhir dokumen)
+Oct 9, 2026 · @Someone · **Revisi 10 Oktober 2026 dini hari: fitur login** (lihat "Riwayat perubahan" di akhir dokumen)
 
-## Status implementasi (hasil audit, 9 Oktober 2026)
+## Status implementasi (diperbarui 10 Oktober 2026)
 
 | Bagian | Status |
 | --- | --- |
-| Pipeline Research Matching (`lib/worker/*`, `lib/llm.ts`, seed, CLI) | Ada di `master`; teruji lewat CLI dengan `LLM_MOCK=true`; 21 unit test lulus |
-| Lapisan HTTP API (`app/api/*`) | **Belum ada. Blocker utama integrasi** |
-| Frontend (Tim, Tugaskan, Detail penugasan) | Ada di branch `feat/ui-development`; berjalan dengan mode mock yang datanya dibangkitkan dari pipeline asli |
+| Pipeline Research Matching (`lib/worker/*`, `lib/llm.ts`, seed, CLI) | Ada di `master`; teruji lewat CLI dengan `LLM_MOCK=true` |
+| Lapisan HTTP API (`app/api/*`) | Ada di `master` (endpoint runs, approval, kirim SIMULASI, bukti, worker) |
+| Competition Matching oleh Jaya | Ada di `master` (eligibility, team builder, conflict check) |
+| Frontend (Tim, Tugaskan, Detail penugasan) | Ada di `master`; mode mock tetap tersedia sebagai cadangan demo |
+| **Login dan logout (email + kata sandi)** | **Branch `feat/auth-login`**; 12 unit test autentikasi dan uji browser lulus. Lihat `docs/fitur-login.md` |
 | API CBN asli | Belum teruji di laptop frontend (`.env` belum ada) |
 | Skrip eval | Belum ada |
 
@@ -92,7 +94,7 @@ Rilis hackathon fokus pada Research Matching lengkap; modul lain dibangun di mes
 **Tidak masuk rilis ini:**
 
 - Career Readiness dan Digital Worker Kanca (dikeluarkan dari cakupan; jadi roadmap)
-- Login dan manajemen user sungguhan (peran dipilih di UI, ditandai SIMULASI)
+- Pendaftaran akun mandiri, lupa kata sandi, SSO kampus, dan halaman manajemen user. Login email + kata sandi **masuk rilis** dengan akun demo sintetis (lihat bagian Autentikasi)
 - Pengiriman email atau WhatsApp sungguhan (ditandai SIMULASI)
 - Integrasi dengan SIAKAD, SIMKATMAWA, atau PDDikti
 - Scraping GitHub atau LinkedIn
@@ -119,6 +121,8 @@ Setiap story memakai format "Sebagai … saya ingin … agar …" dan dipetakan 
 | US-11 | Staf kemahasiswaan | Mendapat usulan tim dengan peran berbeda | Tim lebih seimbang | Sebaiknya |
 | US-12 | Staf kemahasiswaan | Melihat tanda mahasiswa yang sudah terlalu banyak dilibatkan | Kesempatan lebih merata | Sebaiknya |
 | US-15 | Dosen | Membedakan skill yang belum ada buktinya dari skill yang memang tidak dikuasai | Tidak salah menilai mahasiswa | Wajib |
+| US-16 | Dosen / staf | Masuk dengan email dan kata sandi | Hanya orang berwenang yang melihat data mahasiswa dan keputusan tercatat atas nama saya | Wajib |
+| US-17 | Dosen / staf | Keluar dari aplikasi | Sesi tidak dipakai orang lain di komputer bersama | Wajib |
 
 US-13 dan US-14 (Career Center) dihapus bersama modul Career Readiness.
 
@@ -140,6 +144,21 @@ Kebutuhan diberi ID per modul: W (platform worker), R (research), C (competition
 | FR-W8 | Daftar run terakhir dengan status dan tautan ke detail | Wajib | US-07 |
 | FR-W9 | Hasil eval precision@3, sitasi valid, token rata-rata, latensi untuk v1 dan v2 ditulis ke `eval/results.md`. Halaman Scorecard/Rapor di UI ditunda | Wajib (tanpa UI) | US-09 |
 | FR-W10 | Route Handler di `app/api/*` sesuai `docs/kontrak-frontend-backend.md` yang hanya memanggil fungsi pipeline yang sudah ada; tanpa ubah skema | Wajib | US-01, US-02, US-07 |
+
+### Autentikasi (login dan logout)
+
+Pengguna masuk dengan **email dan kata sandi** saja, tanpa login Google atau SSO. Akun disiapkan sistem; tidak ada pendaftaran mandiri di MVP. Rincian teknis: `docs/fitur-login.md`.
+
+| ID | Kebutuhan | Prioritas | Story |
+| --- | --- | --- | --- |
+| FR-A1 | Halaman `/login` dengan field email dan kata sandi, tombol tampilkan kata sandi, validasi di klien (email wajib dan berformat benar, kata sandi wajib) dan di server (Zod) | Wajib | US-16 |
+| FR-A2 | Semua halaman aplikasi dan semua endpoint `/api/*` wajib login, kecuali `/login`, `/api/auth/login`, dan `/api/auth/logout`. Halaman tanpa sesi dialihkan ke `/login?next=…`; API tanpa sesi membalas 401 | Wajib | US-16 |
+| FR-A3 | Setelah login berhasil, pengguna kembali ke halaman tujuan (`next`). Hanya path internal yang diterima untuk mencegah open redirect | Wajib | US-16 |
+| FR-A4 | Login gagal memberi satu pesan yang sama untuk email tak terdaftar dan kata sandi salah ("Email atau kata sandi salah."), mengosongkan kata sandi, dan memindahkan fokus ke field kata sandi | Wajib | US-16 |
+| FR-A5 | Bar atas menampilkan nama dan peran pengguna yang login serta tombol Keluar. Keluar menghapus sesi di database dan cookie, lalu membuka `/login` | Wajib | US-17 |
+| FR-A6 | Keputusan persetujuan dicatat atas nama pengguna yang login (`approvals.decided_by`, misalnya "Bu Rina (Dosen peneliti)") | Wajib | US-06, US-16 |
+| FR-A7 | Dua akun demo sintetis (dosen dan staf kemahasiswaan) dengan tombol isi otomatis di halaman login, berlabel Sintetis | Wajib | US-16 |
+| FR-A8 | Pembatasan akses per peran (misalnya staf kemahasiswaan hanya ke Jaya) | Nanti | — |
 
 ### Research Matching
 
@@ -208,6 +227,8 @@ Prototipe berjalan di localhost dengan data sintetis, tetapi aturan akses dan pr
 | NFR-6 | Auditabilitas | Setiap run, langkah, panggilan LLM, dan keputusan approval tercatat dengan waktu |
 | NFR-7 | Kualitas kode | Unit test untuk skor dan verifikasi sitasi; skrip eval menulis hasil ke `eval/results.md` |
 | NFR-8 | Transparansi | Komponen simulasi dan data sintetis berlabel di UI dan README |
+| NFR-9 | Keamanan login | Kata sandi disimpan sebagai hash scrypt bergaram (bawaan Node, tanpa dependensi baru); token sesi 32 byte acak, di database hanya disimpan SHA-256-nya; cookie `tl_session` httpOnly, SameSite=Lax, Secure saat HTTPS; sesi berlaku 8 jam; logout mencabut sesi di server; proxy hanya pengecekan cepat cookie, validasi sesi di server ke database |
+| NFR-10 | Ketahanan data akun | `npm run seed` tidak menghapus tabel `users` dan `sessions`, jadi akun dan sesi bertahan saat data mahasiswa diisi ulang |
 
 **Data:**
 
@@ -215,6 +236,7 @@ Prototipe berjalan di localhost dengan data sintetis, tetapi aturan akses dan pr
 - Guidebook lomba: sintetis atau dokumen publik.
 - Kompetensi mahasiswa hanya tercatat lewat bukti. "Belum ada bukti" berarti data kampus belum mencatatnya, bukan berarti mahasiswa tidak menguasainya.
 - Tidak memakai data kampus yang bersifat rahasia, sesuai brief.
+- Akun demo (sintetis, domain `.test` yang memang dicadangkan untuk pengujian): `rina@kampus.test` (Bu Rina, dosen peneliti) dan `andi@kampus.test` (Pak Andi, staf kemahasiswaan), kata sandi `talentlink2026`. Hanya untuk prototipe; di produksi akun dibuat admin kampus.
 
 **Privasi dan keadilan:**
 
@@ -225,12 +247,13 @@ Prototipe berjalan di localhost dengan data sintetis, tetapi aturan akses dan pr
 
 ## Kebutuhan UX dan layar
 
-Tiga layar utama, masing-masing harus menunjukkan progres, error, dan langkah berikutnya, karena kriteria UI/UX menilai penyelesaian tugas, navigasi, kejelasan output, serta status progres dan error. Halaman Scorecard/Rapor ditunda.
+Satu layar login dan tiga layar utama, masing-masing harus menunjukkan progres, error, dan langkah berikutnya, karena kriteria UI/UX menilai penyelesaian tugas, navigasi, kejelasan output, serta status progres dan error. Halaman Scorecard/Rapor ditunda.
 
 | Layar (menu) | Elemen wajib | Status kosong, progres, dan error |
 | --- | --- | --- |
+| Masuk (`/login`) | Kartu terbelah dua seperti inspirasi `design/inspiration/05-login-split.jpg`: panel biru berpola sirkuit berisi identitas produk dan tim Digital Worker; form "Selamat datang" dengan field email dan kata sandi (label menempel di garis atas, ikon, tombol tampilkan kata sandi), tombol Masuk, pemisah "atau pakai akun demo" dengan dua kartu akun demo; tanpa tombol Google atau media sosial | Field kosong atau email salah format: pesan di bawah field; kredensial salah: kotak merah "Email atau kata sandi salah."; saat memeriksa: tombol "Memeriksa…" dengan spinner; Caps Lock aktif: petunjuk di bawah kata sandi |
 | Tim Digital Worker (Tim) | Kartu pegawai Netra (ID pegawai, jabatan, penempatan, tingkat kemampuan, knowledge base, hak akses, token X / 10.000.000), "Menunggu keputusan Anda", riwayat penugasan, Jaya "Dalam pelatihan" | Belum ada penugasan: ajakan menugaskan Netra; budget ≥ 80%: banner kuning |
-| Tugaskan Netra (Tugaskan) | Salam Netra, textarea kebutuhan riset, 3 contoh brief yang bisa diklik, centang "mode pembanding" (v1); peran tampil di bar atas dengan label SIMULASI | Brief < 15 karakter ditolak dengan pesan; tombol nonaktif saat mengirim |
+| Tugaskan Netra (Tugaskan) | Salam Netra, textarea kebutuhan riset, 3 contoh brief yang bisa diklik, centang "mode pembanding" (v1); nama dan peran pengguna yang login tampil di bar atas beserta tombol Keluar | Brief < 15 karakter ditolak dengan pesan; tombol nonaktif saat mengirim |
 | Detail penugasan | Jejak kerja Netra (langkah, status, durasi, token, model); Link Brief (kartu kandidat, skor atau "Tanpa skor; diurutkan AI" di v1, chip ID bukti, badge Hidden Talent dan Fair Exposure, "Belum ada bukti di data kampus", catatan AI, draf undangan, tombol "Setujui dan undang" dan "Tolak"); panel bukti | Langkah berjalan: spinner; klarifikasi: kotak jawab; gagal: pesan + tombol coba lagi; tanpa kandidat ≥ 50: kotak "tidak ada yang memenuhi" + kandidat terdekat; 0 kandidat: arahan "Ubah kebutuhan" |
 
 &#91;embedded content: status run · 7 status\]
@@ -265,6 +288,12 @@ Rilis diterima jika 12 kasus eval lulus dan semua syarat minimum brief terpenuhi
 | AC-12 | Eval dijalankan | Membuka `eval/results.md` | Tabel v1 vs v2 terisi dari Token Ledger dan hasil eval (tanpa halaman UI) | FR-W9, AI-5, AI-7 |
 | AC-13 | Repo bersih | Mengikuti README | Aplikasi jalan di localhost tanpa langkah tambahan | NFR-3 |
 | AC-14 | Guidebook tim 3 orang, mahasiswa aktif | Eligibility Check (jika modul masuk) | Mahasiswa tidak aktif tersaring dengan alasan tertulis | FR-C2 |
+| AC-15 | Belum login | Membuka `/tasks/new` | Dialihkan ke `/login?next=%2Ftasks%2Fnew`; setelah login kembali ke `/tasks/new` | FR-A2, FR-A3 |
+| AC-16 | Belum login | Memanggil `GET /api/runs` | 401 dengan pesan "Sesi Anda berakhir. Silakan masuk lagi." | FR-A2 |
+| AC-17 | Akun demo | Login dengan kata sandi salah, lalu dengan email tak terdaftar | Keduanya 401 dengan pesan yang sama | FR-A4 |
+| AC-18 | Sudah login | Menekan Keluar, lalu memakai token lama | Token lama ditolak 401; halaman aplikasi dialihkan ke login | FR-A5, NFR-9 |
+| AC-19 | Login sebagai Bu Rina | Menyetujui kandidat | `decided_by` berisi "Bu Rina (Dosen peneliti)" | FR-A6 |
+| AC-20 | Parameter `next=//situs-lain.com` | Login atau membuka `/login` saat sudah masuk | Dialihkan ke `/`, bukan ke situs luar | FR-A3 |
 
 ## Risiko, asumsi, dan pertanyaan terbuka
 
@@ -275,6 +304,9 @@ Risiko terbesar adalah format API CBN yang belum dikonfirmasi; mitigasinya satu 
 | Lapisan HTTP API belum ada (temuan audit) | UI dan pipeline tidak tersambung; demo nyata mustahil | Route Handler tipis di atas fungsi yang ada; prioritas pertama backend; mockup tetap jadi cadangan demo |
 | Isi alasan AI tidak diverifikasi, hanya ID bukti | AI bisa menambah detail yang tidak ada di bukti | Setiap alasan wajib punya chip bukti yang bisa dibuka; dosen memeriksa sebelum menyetujui |
 | Halaman Scorecard ditunda | Bukti efisiensi token tidak terlihat di aplikasi | Tampilkan `eval/results.md` di README dan slide |
+| Kata sandi akun demo tertulis di halaman login dan dokumen | Siapa pun bisa masuk ke prototipe | Hanya data sintetis di localhost; di produksi akun demo dihapus dan akun dibuat admin kampus |
+| Belum ada pembatasan percobaan login | Tebak kata sandi berulang tidak dihambat | Kata sandi di-hash scrypt (lambat ditebak); rate limit per email masuk roadmap |
+| Semua endpoint kini wajib login | Uji `curl` ke API tanpa cookie gagal 401 | Login dulu dengan `curl -c cookie.txt`, lalu kirim `-b cookie.txt` (contoh di `docs/api.md`) |
 | Format API CBN berbeda dari asumsi | Pipeline belum bisa memanggil LLM | Semua panggilan lewat `lib/llm.ts`; mode mock untuk UI dan test; konfirmasi ke mentor sebelum 18.00 |
 | API tidak mendukung structured output | JSON sering rusak | Instruksi JSON di prompt + validasi Zod + retry + fallback template |
 | Rate limit atau koneksi gagal saat demo | Demo terhenti | Video cadangan; satu run contoh tersimpan di database untuk ditunjukkan |
@@ -296,6 +328,7 @@ Risiko terbesar adalah format API CBN yang belum dikonfirmasi; mitigasinya satu 
 - [ ] Dukungan structured output JSON dan batas rate limit
 - [ ] Ada dashboard pemakaian token resmi untuk dicocokkan dengan Token Ledger?
 - [ ] Konfirmasi batas submission ke panitia
+- [ ] Perlu pembatasan akses per peran (FR-A8) untuk demo, atau cukup login saja?
 - [ ] Validasi masalah ke dosen PENS dan minta satu topik riset nyata untuk demo
 
 ## Skill dan aturan untuk AI coding assistant
@@ -338,6 +371,7 @@ Dengan `--agent claude-code` skill terpasang di `.claude/skills/` proyek. Untuk 
 - Search memakai satu query SQL dengan JOIN, tanpa query di dalam loop (N+1).
 - Indeks pada `evidence(student_id)`, `evidence_skills(skill_id)`, `run_steps(run_id)`, `token_ledger(run_id)`.
 - Validasi Zod di setiap endpoint dan setiap output LLM.
+- Setiap Route Handler baru memakai `handle()` dari `lib/http.ts` (otomatis wajib login dan menerima pengguna yang login); `handlePublic()` hanya untuk login dan logout.
 - Katalog skill dan hasil parse guidebook di-cache di memori.
 - Pipeline berjalan di background; endpoint langsung mengembalikan run\_id; timeout 30 detik per langkah.
 - Tanpa abstraksi yang belum dibutuhkan; fungsi kecil dengan tipe jelas.
@@ -598,6 +632,7 @@ Rilis dibagi dalam empat checkpoint; setiap checkpoint menentukan apakah cakupan
 - `docs/penyesuaian-mockup-audit.md`: penyesuaian mockup terhadap audit dan usulan perilaku endpoint
 - `docs/perubahan-cakupan-netra-jaya.md`: dampak revisi ini ke frontend dan backend
 - `docs/bisnis-dan-alur-kerja.md`: model bisnis dan alur kerja per pengguna
+- `docs/fitur-login.md`: rancangan login dan logout, dampak ke backend dan ERD
 
 ## Riwayat perubahan
 
@@ -607,3 +642,4 @@ Rilis dibagi dalam empat checkpoint; setiap checkpoint menentukan apakah cakupan
 | 9 Okt 2026, malam | Halaman Scorecard/Rapor ditunda dari UI; eval tetap lewat skrip dan `eval/results.md` | Menyederhanakan MVP; logika metrik sulit dipahami pengguna |
 | 9 Okt 2026, malam | Ditambah bagian Status implementasi, FR-W10 (lapisan HTTP API), FR-R13 dan US-15 (belum ada bukti vs tidak menguasai), catatan audit di FR-R10, AI-2, AC-08, AC-10, AC-12, serta risiko baru | Temuan audit integrasi frontend–backend |
 | 9 Okt 2026, malam | Layar disesuaikan dengan mockup: istilah CBN Digital Worker, form Tugaskan satu kartu, "Setujui dan undang" satu klik, peran di bar atas | Penyederhanaan alur dan bahasa bisnis CBN |
+| 10 Okt 2026, dini hari | Ditambah fitur login dan logout email + kata sandi: US-16, US-17, FR-A1–A8, NFR-9, NFR-10, AC-15–AC-20, layar Masuk, akun demo, tabel `users` dan `sessions`, risiko baru. Login dikeluarkan dari daftar "Tidak masuk rilis" | Permintaan tim; keputusan persetujuan perlu tercatat atas nama orang yang login |

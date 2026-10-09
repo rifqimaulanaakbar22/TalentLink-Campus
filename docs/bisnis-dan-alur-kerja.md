@@ -208,7 +208,7 @@ Ukuran teknis (ketepatan, bukti, biaya, kecepatan) diukur skrip eval dan ditulis
 
 | Bagian | MVP hackathon | Produk penuh |
 | --- | --- | --- |
-| Pengguna aktif | Dosen peneliti (peran dipilih tanpa login, SIMULASI) | Login kampus per peran |
+| Pengguna aktif | Dosen peneliti dan staf kemahasiswaan, login email + kata sandi dengan akun demo sintetis | SSO kampus, akun dari admin, pembatasan akses per peran |
 | Worker | Netra bertugas; Jaya dalam pelatihan | Netra dan Jaya bertugas; Kanca (Career Readiness) sebagai worker ketiga |
 | Data | 80 mahasiswa sintetis | Data kampus teranonimkan, integrasi SIAKAD |
 | Pengiriman | SIMULASI | Email atau WhatsApp resmi kampus |

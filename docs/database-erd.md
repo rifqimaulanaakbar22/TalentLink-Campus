@@ -10,6 +10,7 @@ erDiagram
     runs     ||--o{ run_steps : "terdiri dari"
     runs     |o--o{ token_ledger : "memakai token"
     runs     ||--o{ approvals : "diputuskan lewat"
+    users    ||--o{ sessions : "masuk lewat"
 
     students {
         INTEGER id PK
@@ -90,14 +91,32 @@ erDiagram
         TEXT message_draft
         TEXT sent_at "terisi setelah kirim SIMULASI"
     }
+
+    users {
+        INTEGER id PK
+        TEXT email UK "huruf kecil, contoh rina@kampus.test"
+        TEXT name "Bu Rina"
+        TEXT role "dosen | kemahasiswaan"
+        TEXT password_hash "scrypt bergaram, bukan kata sandi asli"
+        TEXT created_at
+        TEXT last_login_at
+    }
+
+    sessions {
+        TEXT id PK "SHA-256 dari token di cookie"
+        INTEGER user_id FK "ON DELETE CASCADE"
+        TEXT created_at
+        TEXT expires_at "8 jam setelah login"
+    }
 ```
 
-## Dua kelompok tabel
+## Kelompok tabel
 
 | Kelompok | Tabel | Sifat |
 | --- | --- | --- |
 | Talent Graph | `students`, `skills`, `evidence`, `evidence_skills` | Hanya diisi oleh seed. Worker dan API **read-only** |
 | Jejak run | `runs`, `run_steps`, `token_ledger`, `approvals` | Ditulis oleh pipeline dan API; membuat hasil tetap ada setelah refresh |
+| Autentikasi | `users`, `sessions` | Ditulis oleh `lib/auth.ts` saat login dan logout. **Tidak disentuh seed**, jadi akun dan sesi bertahan saat `npm run seed`. Akun demo dibuat otomatis saat login pertama |
 
 `evidence_skills` adalah sisi graph: satu bukti bisa membuktikan beberapa skill dengan kekuatan berbeda. Skor kandidat dihitung dari sini (`strength/3 × w_type × w_recency`, ambil yang terbaik per skill).
 
@@ -106,6 +125,7 @@ erDiagram
 - `runs.worker_id` merujuk ke `id` di `lib/workers.json`, bukan tabel.
 - `approvals.candidate_ids` dan `runs.result_json` menyimpan kode mahasiswa (`S-101`) dan ID bukti (`EV-012`) sebagai JSON.
 - `token_ledger.run_id` boleh kosong agar panggilan LLM di luar run tetap tercatat di budget.
+- `approvals.decided_by` berisi nama dan peran pengguna yang login (contoh "Bu Rina (Dosen peneliti)") sebagai teks, bukan foreign key ke `users`, agar jejak keputusan tetap terbaca walau akun dihapus.
 
 ## Indeks
 
@@ -118,3 +138,5 @@ erDiagram
 | `token_ledger(run_id)` | Token per run dan per langkah |
 | `approvals(run_id, id)` | Approval terakhir |
 | `runs(created_at)` | Daftar 20 run terbaru |
+| `sessions(user_id)` | Hapus atau cari sesi per pengguna |
+| `users(email)` (UNIQUE) | Cari akun saat login |

@@ -94,6 +94,25 @@ CREATE TABLE IF NOT EXISTS approvals (
   sent_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_approvals_run ON approvals(run_id, id);
+
+-- Autentikasi (fitur login). Tidak disentuh seed, sehingga akun dan sesi bertahan saat seed ulang.
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('dosen','kemahasiswaan')),
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 `;
 
 export const DATABASE_PATH = process.env.DATABASE_PATH || "data/talentlink.db";
