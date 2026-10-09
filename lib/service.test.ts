@@ -379,3 +379,58 @@ describe("Competition Matching (Jaya) lewat API", () => {
     expect(sendInvitation(id).label).toBe("SIMULASI");
   });
 });
+
+describe("skill di luar katalog langsung dihentikan (cut) dan jawaban klarifikasi pendek", () => {
+  const skippedAfterNormalize = (id: number) =>
+    getRunDetail(id)
+      .steps.filter((s) => ["search", "score", "explain", "verify"].includes(s.step))
+      .map((s) => s.status);
+
+  it("Netra: skill wajib di luar katalog -> berhenti tanpa kandidat dan tanpa panggilan explain", async () => {
+    const id = await runBrief("Butuh mahasiswa blockchain dan Python untuk riset smart contract");
+    const d = getRunDetail(id);
+    expect(d.run.status).toBe("awaiting_approval");
+    expect(d.result!.noMatch).toBe(true);
+    expect(d.result!.candidates).toEqual([]);
+    expect(d.result!.unknownSkills.map((s) => s.toLowerCase())).toContain("blockchain");
+    expect(skippedAfterNormalize(id)).toEqual(["skipped", "skipped", "skipped", "skipped"]);
+    expect(d.steps.find((s) => s.step === "brief")!.detail).toMatch(/belum ada di katalog/);
+    expect(ledgerCalls(id)).toBe(1); // hanya parse
+  });
+
+  it("Netra: brief yang hanya berisi skill di luar katalog juga dihentikan, bukan ditanya balik", async () => {
+    const id = await runBrief("Butuh mahasiswa quantum computing untuk riset kriptografi");
+    const d = getRunDetail(id);
+    expect(d.run.status).toBe("awaiting_approval");
+    expect(d.result!.candidates).toEqual([]);
+    expect(d.result!.unknownSkills.length).toBeGreaterThan(0);
+  });
+
+  it("Jaya: lomba yang butuh skill di luar katalog -> berhenti tanpa tim", async () => {
+    const { runId } = createRunFromBody({
+      workerId: "jaya",
+      brief: "Kompetisi Blockchain Nasional 2026. Tim 3 orang, mahasiswa aktif. Peran: pengembang smart contract, auditor blockchain, presenter.",
+      mode: "v2",
+    });
+    await runWorker(runId);
+    const d = getRunDetail(runId);
+    expect(d.run.status).toBe("awaiting_approval");
+    expect(d.result!.candidates).toEqual([]);
+    expect(d.result!.noMatch).toBe(true);
+    expect(d.result!.unknownSkills.map((s) => s.toLowerCase())).toContain("blockchain");
+    expect(skippedAfterNormalize(runId)).toEqual(["skipped", "skipped", "skipped", "skipped"]);
+    expect(ledgerCalls(runId)).toBe(1);
+  });
+
+  it("jawaban klarifikasi satu karakter (misalnya jumlah anggota '4') diterima", async () => {
+    const { runId } = createRunFromBody({
+      workerId: "jaya",
+      brief: "Kami ingin mengirim mahasiswa ke sebuah lomba tahun ini.",
+      mode: "v2",
+    });
+    await runWorker(runId);
+    expect(getRunDetail(runId).run.status).toBe("needs_clarification");
+    expect(clarifyRun(runId, { answer: "4" })).toEqual({ runId, status: "queued" });
+    expectApiError(() => clarifyRun(runId, { answer: "   " }), 400);
+  });
+});

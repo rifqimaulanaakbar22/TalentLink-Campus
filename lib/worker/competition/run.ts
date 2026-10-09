@@ -64,7 +64,9 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
       budgetWarning ||= parsed.budgetWarning;
       criteria = parsed.data;
       const noSkills = criteria.roles.every((r) => r.skills.length === 0);
-      if (criteria.needs_clarification || noSkills) {
+      const outOfCatalog = (criteria.unknown_skills?.length ?? 0) > 0;
+      // Lomba yang butuh skill di luar katalog tidak ditanya balik; di-cut setelah normalize.
+      if ((criteria.needs_clarification || noSkills) && !outOfCatalog) {
         const question = criteria.question || "Berapa jumlah anggota tim dan bidang apa yang dilombakan?";
         criteria = { ...criteria, needs_clarification: true, question };
         q().setCriteria.run(JSON.stringify(criteria), nowIso(), runId);
@@ -108,6 +110,44 @@ export async function runCompetitionMatching(runId: number): Promise<RunStatus> 
         (unknownProdi.length ? `. Prodi tidak dikenal: ${unknownProdi.join(", ")}` : "") +
         ".",
     );
+
+    // Skill bidang lomba di luar katalog, atau peran tanpa satu pun skill katalog: hentikan sekarang.
+    // Menyusun tim dari sisa skill akan menghasilkan usulan yang menyesatkan.
+    const outside = (criteria.unknown_skills ?? []).filter((x) => resolveSkill(x) === null);
+    for (const u of unknownSkills) if (!outside.some((o) => o.toLowerCase() === u.toLowerCase())) outside.push(u);
+    const emptyRoles = roles.filter((r) => r.skillIds.length === 0).map((r) => r.name);
+    if (outside.length > 0 || emptyRoles.length > 0) {
+      const reason = outside.length
+        ? `${outside.join(", ")} belum ada di katalog skill kampus`
+        : `peran ${emptyRoles.join(", ")} tidak punya skill yang ada di katalog`;
+      for (const st of ["search", "score", "explain", "verify"] as const) steps.skip(st, `Dilewati: ${reason}.`);
+      steps.start("brief", `${name} menyusun usulan tim…`);
+      const result: RunResult = {
+        mode: "v2",
+        topic: criteria.competition_name,
+        requiredSkills: [...new Set(roles.flatMap((r) => r.skillIds))].map((id) => names[id]),
+        niceSkills: [],
+        unknownSkills: outside.length ? outside : emptyRoles,
+        noMatch: true,
+        candidates: [],
+        invitationDraft: "",
+        budgetWarning,
+        competition: {
+          competitionName: criteria.competition_name,
+          teamSize: criteria.team_size,
+          teamCount: criteria.team_count,
+          rules: describeRules(rules),
+          screenedCount: 0,
+          eligibleCount: 0,
+          excluded: [],
+          teams: [],
+          conflicts: [],
+        },
+      };
+      q().setResult.run(JSON.stringify(result), "awaiting_approval", nowIso(), runId);
+      steps.done(`${name} berhenti: ${reason}, jadi belum bisa menyusun tim berbukti. Ubah guidebook atau peran lomba.`);
+      return "awaiting_approval";
+    }
 
     // 3. search = Eligibility Check + kandidat berbukti (satu query JOIN)
     steps.start("search", `${name} memeriksa syarat lomba untuk setiap mahasiswa…`);

@@ -31,8 +31,9 @@ export function ClarifyBox({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (answer.trim().length < 3) {
-      setError(jaya ? "Tulis jawaban singkat, misalnya jumlah anggota tim dan bidang lomba." : "Tulis jawaban singkat, misalnya topik atau skill yang dibutuhkan.");
+    // Jawaban sependek "4" (jumlah anggota) atau "CV" tetap sah.
+    if (answer.trim().length === 0) {
+      setError(jaya ? "Tulis jawaban Anda, misalnya jumlah anggota tim atau bidang lomba." : "Tulis jawaban Anda, misalnya topik atau skill yang dibutuhkan.");
       return;
     }
     setBusy(true);

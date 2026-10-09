@@ -55,12 +55,16 @@ export interface Criteria {
   nice_skills: string[];
   min_semester: number | null;
   count: number;
+  /** Skill yang disebut di brief tetapi tidak ada di katalog (dilaporkan parse, tidak dibuang diam-diam). */
+  unknown_skills?: string[];
 }
 
 export interface NormalizedCriteria extends Criteria {
   requiredSkillIds: number[];
   niceSkillIds: number[];
   unknownSkills: string[];
+  /** Skill wajib yang tidak ada di katalog; jika terisi, run dihentikan (cut). */
+  unknownRequired: string[];
 }
 
 /** Kandidat hasil search: profil tanpa nama + bukti yang relevan dengan skill brief. */
@@ -142,6 +146,8 @@ export interface CompetitionCriteria {
   max_semester: number | null;
   allowed_prodi: string[];
   roles: CompetitionRole[];
+  /** Skill bidang lomba yang dibutuhkan tetapi tidak ada di katalog; jika terisi, run dihentikan (cut). */
+  unknown_skills?: string[];
 }
 
 export interface ExcludedStudent {

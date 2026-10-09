@@ -229,6 +229,8 @@ export type ScorecardResponse =
 - `result.noMatch === true` berarti tidak ada kandidat dengan skor ≥ 50. Frontend menampilkan kotak "tidak ada yang memenuhi" dan 3 kandidat terdekat beserta `missingSkills`.
 - `reasonSource === "template"` berarti alasan dibuat dari judul bukti karena LLM gagal. Frontend boleh memberi keterangan kecil.
 - Chip ID bukti memanggil `GET /api/evidence/:id` dan membuka panel bukti.
+- **Skill di luar katalog langsung dihentikan (cut), 10 Oktober 2026.** Jika brief Netra menyebut skill wajib yang tidak ada di katalog, atau guidebook Jaya butuh skill bidang lomba di luar katalog, run berhenti setelah `normalize`: status `awaiting_approval`, `result.noMatch = true`, `result.candidates = []`, `result.unknownSkills` berisi skill tersebut, langkah `search`, `score`, `explain`, `verify` berstatus `skipped`, dan tidak ada panggilan explain. Untuk Jaya, `result.competition.screenedCount = 0`. Frontend menampilkan status kosong yang menyebut skill itu, bukan kandidat.
+- Jawaban klarifikasi cukup 1 karakter (misalnya "4" untuk jumlah anggota tim).
 - Endpoint tidak pernah mengubah tabel students dan evidence.
 
 ### Tambahan: Competition Matching oleh Jaya (aditif, 9 Oktober 2026 malam)

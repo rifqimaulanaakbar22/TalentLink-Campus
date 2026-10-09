@@ -306,14 +306,19 @@ export function LinkBrief({
         </p>
       </Card>
 
-      {competition && <CompetitionPanel competition={competition} />}
+      {/* Run yang dihentikan karena skill di luar katalog tidak sempat menyaring mahasiswa. */}
+      {competition && competition.screenedCount > 0 && <CompetitionPanel competition={competition} />}
 
       {result.noMatch && empty && competition && (
         <Card>
           <EmptyState
             icon={SearchX}
             title="Belum ada tim yang bisa diusulkan"
-            description="Tidak ada mahasiswa yang lolos syarat sekaligus punya bukti untuk peran lomba ini. Coba longgarkan syarat atau sebut peran yang berbeda."
+            description={
+              result.unknownSkills.length > 0
+                ? `Jaya berhenti karena ${result.unknownSkills.join(", ")} belum ada di katalog skill kampus, jadi tidak ada bukti mahasiswa yang bisa dicocokkan. Ubah guidebook atau sebut peran dengan skill yang lebih umum.`
+                : "Tidak ada mahasiswa yang lolos syarat sekaligus punya bukti untuk peran lomba ini. Coba longgarkan syarat atau sebut peran yang berbeda."
+            }
             action={
               <ButtonLink href="/tasks/new?worker=jaya" variant="secondary">
                 Ubah guidebook
@@ -330,7 +335,7 @@ export function LinkBrief({
             title="Belum ada mahasiswa dengan bukti untuk kebutuhan ini"
             description={
               result.unknownSkills.length > 0
-                ? `${result.unknownSkills.join(", ")} belum ada di katalog skill kampus, jadi Netra tidak bisa mencocokkannya dengan bukti mahasiswa. Coba sebut skill yang lebih umum.`
+                ? `${author} berhenti karena ${result.unknownSkills.join(", ")} belum ada di katalog skill kampus, jadi tidak ada bukti mahasiswa yang bisa dicocokkan. Coba sebut skill yang lebih umum.`
                 : "Tidak ada mahasiswa aktif yang punya bukti untuk skill wajib. Coba longgarkan syarat atau kurangi skill wajib."
             }
             action={

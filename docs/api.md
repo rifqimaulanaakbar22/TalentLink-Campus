@@ -81,6 +81,7 @@ curl -X POST $B/api/runs/1/send
 - **Token per langkah:** dari `token_ledger`, dicocokkan dengan nama langkah dan rentang waktunya. Retry explain tercatat di langkah `verify`.
 - **Error API CBN** (401, 429, timeout, budget habis) muncul sebagai langkah `failed` dan `run.errorMessage`, misalnya `Batas permintaan API CBN tercapai, coba lagi sebentar`.
 - **Rem anggaran (Neraca Token):** mulai batas peringatan (bawaan 80%) Netra dengan `mode: "v1"` (Jalur Pembanding) ditolak 409; mulai batas berhenti (bawaan 95%) semua penugasan baru dan coba lagi ditolak 409. Jaya selalu `v2`. Dengan `LLM_MOCK=true` semua panggilan tercatat 0 token, jadi rem tidak aktif. Rincian di `docs/fitur-neraca-token.md`.
+- **Skill di luar katalog:** run dihentikan setelah `normalize` tanpa kandidat; `result.unknownSkills` berisi skill itu dan langkah `search`–`verify` berstatus `skipped`. Lihat kontrak bagian 4.
 - **Skenario uji mock:** `LLM_MOCK_SCENARIO=fake_ids` (ID bukti palsu → alasan template) dan `LLM_MOCK_SCENARIO=bad_json` (JSON rusak → alasan template).
 
 ## Jaya (Competition Matching)

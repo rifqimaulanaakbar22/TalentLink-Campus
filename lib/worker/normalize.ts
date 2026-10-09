@@ -61,9 +61,32 @@ export function normalizeCriteria(c: Criteria): NormalizedCriteria {
     return ids;
   };
   const requiredSkillIds = resolve(c.required_skills);
+  const unknownRequired = [...unknownSkills];
   // Skill yang sudah wajib tidak dihitung dua kali sebagai tambahan.
   const niceSkillIds = resolve(c.nice_skills).filter((id) => !requiredSkillIds.includes(id));
-  return { ...c, requiredSkillIds, niceSkillIds, unknownSkills };
+  // Skill di luar katalog yang dilaporkan parse dianggap wajib: dosen menyebutnya secara eksplisit.
+  for (const s of c.unknown_skills ?? []) {
+    if (resolveSkill(s) !== null) continue;
+    if (!unknownRequired.some((u) => u.toLowerCase() === s.toLowerCase())) unknownRequired.push(s);
+    if (!unknownSkills.some((u) => u.toLowerCase() === s.toLowerCase())) unknownSkills.push(s);
+  }
+  return { ...c, requiredSkillIds, niceSkillIds, unknownSkills, unknownRequired };
+}
+
+/** Baris katalog untuk prompt: nama skill beserta alias, agar singkatan seperti "CV" dikenali. */
+export function catalogForPrompt(): string {
+  return getSkillCatalog()
+    .skills.map((s) => (s.aliases.length ? `${s.name} (${s.aliases.slice(0, 4).join(", ")})` : s.name))
+    .join("; ");
+}
+
+// Hanya untuk mock (LLM_MOCK=true): contoh skill yang sengaja tidak ada di katalog.
+const MOCK_OUT_OF_CATALOG = ["blockchain", "smart contract", "quantum computing", "solidity", "kriptografi kuantum"];
+
+/** Mock parse: skill di luar katalog yang disebut di teks. LLM asli melaporkannya lewat unknown_skills. */
+export function findOutOfCatalogInText(text: string): string[] {
+  const lower = text.toLowerCase();
+  return MOCK_OUT_OF_CATALOG.filter((s) => lower.includes(s));
 }
 
 /** Skill dari katalog yang disebut di teks bebas (dipakai mock parse). */

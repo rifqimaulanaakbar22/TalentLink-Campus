@@ -74,7 +74,7 @@ export const ClarifySchema = z.object({
   answer: z
     .string({ error: "Jawaban wajib diisi." })
     .trim()
-    .min(2, { error: "Jawaban klarifikasi terlalu pendek." })
+    .min(1, { error: "Jawaban klarifikasi wajib diisi." })
     .max(2000, { error: "Jawaban klarifikasi terlalu panjang." }),
 });
 

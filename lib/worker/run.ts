@@ -113,7 +113,9 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
       budgetWarning ||= parsed.budgetWarning;
       criteria = parsed.data;
       q().setCriteria.run(JSON.stringify(criteria), nowIso(), runId);
-      if (criteria.needs_clarification || (criteria.required_skills.length === 0 && criteria.nice_skills.length === 0)) {
+      const mentionedSkills = criteria.required_skills.length + criteria.nice_skills.length + (criteria.unknown_skills?.length ?? 0);
+      // Brief yang menyebut skill (meski di luar katalog) tidak ditanya balik; skill di luar katalog di-cut di normalize.
+      if (mentionedSkills === 0 || (criteria.needs_clarification && (criteria.unknown_skills?.length ?? 0) === 0)) {
         const question = criteria.question || "Topik riset atau skill apa yang Bapak/Ibu butuhkan?";
         criteria = { ...criteria, needs_clarification: true, question };
         q().setCriteria.run(JSON.stringify(criteria), nowIso(), runId);
@@ -144,6 +146,33 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
         (reqNames.length ? ` (wajib: ${reqNames.join(", ")}${niceNames.length ? `; tambahan: ${niceNames.join(", ")}` : ""})` : "") +
         (norm.unknownSkills.length ? `. Tidak dikenal di katalog: ${norm.unknownSkills.join(", ")}.` : "."),
     );
+
+    // Skill wajib di luar katalog: hentikan sekarang. Mencari dengan sisa skill saja menghasilkan
+    // kandidat yang menyesatkan (misalnya ahli Python biasa untuk riset blockchain).
+    if (norm.unknownRequired.length > 0) {
+      const list = norm.unknownRequired.join(", ");
+      for (const s of ["search", "score", "explain", "verify"] as const) {
+        steps.skip(s, `Dilewati: ${list} belum ada di katalog skill kampus.`);
+      }
+      steps.start("brief", `${name} menyusun Link Brief…`);
+      const result: RunResult = {
+        mode: run.mode,
+        topic: norm.topic,
+        requiredSkills: reqNames,
+        niceSkills: niceNames,
+        unknownSkills: norm.unknownSkills,
+        noMatch: true,
+        candidates: [],
+        invitationDraft: "",
+        budgetWarning,
+      };
+      q().setResult.run(JSON.stringify(result), "awaiting_approval", nowIso(), runId);
+      steps.done(
+        `${name} berhenti: ${list} belum ada di katalog skill kampus, jadi tidak ada bukti mahasiswa yang bisa dicocokkan. ` +
+          `Ubah kebutuhan dengan skill lain.`,
+      );
+      return "awaiting_approval";
+    }
 
     // 3. search
     const active = countActiveStudents();
