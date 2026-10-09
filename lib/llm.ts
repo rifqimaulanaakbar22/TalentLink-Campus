@@ -106,20 +106,24 @@ function parseAndValidate<T>(text: string, schema: z.ZodType<T>): T {
   return parsed.data;
 }
 
-// Diingat per proses: gateway yang menolak response_format tidak dicoba lagi.
+// Diingat per proses: parameter yang ditolak gateway tidak dikirim lagi.
 let jsonModeRejected = false;
+let thinkingParamRejected = false;
 
 type ApiResponse = {
   choices?: { message?: { content?: string | null } }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 
-async function post(model: string, messages: ChatMessage[], jsonMode: boolean): Promise<Response> {
+async function post(model: string, messages: ChatMessage[]): Promise<Response> {
   const base = process.env.CBN_API_BASE_URL;
   const key = process.env.CBN_API_KEY;
   if (!base || !key) throw new LLMError("config", "Konfigurasi API CBN belum diisi (CBN_API_BASE_URL / CBN_API_KEY)");
   const body: Record<string, unknown> = { model, messages, temperature: 0 };
-  if (jsonMode) body.response_format = { type: "json_object" };
+  if (!jsonModeRejected) body.response_format = { type: "json_object" };
+  // Model Qwen di CBN adalah model thinking; reasoning-nya membuat explain lewat 30 detik
+  // dan memakan token. Tugas kita cukup JSON terstruktur, jadi thinking dimatikan.
+  if (!thinkingParamRejected) body.enable_thinking = false;
   try {
     return await fetch(`${base.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
@@ -137,15 +141,14 @@ async function post(model: string, messages: ChatMessage[], jsonMode: boolean): 
 }
 
 async function requestOnce(model: string, messages: ChatMessage[]): Promise<ApiResponse> {
-  let res = await post(model, messages, !jsonModeRejected);
-  if (res.status === 400 && !jsonModeRejected) {
+  let res = await post(model, messages);
+  // Jika gateway menolak parameter opsional, buang parameter itu lalu ulangi (maksimal sekali per parameter).
+  for (let i = 0; i < 2 && res.status === 400; i++) {
     const text = await res.text();
-    if (/response_format|json_object/i.test(text)) {
-      jsonModeRejected = true;
-      res = await post(model, messages, false);
-    } else {
-      throw new LLMError("http", `API CBN menolak permintaan (400): ${text.slice(0, 200)}`);
-    }
+    if (!jsonModeRejected && /response_format|json_object/i.test(text)) jsonModeRejected = true;
+    else if (!thinkingParamRejected && /enable_thinking/i.test(text)) thinkingParamRejected = true;
+    else throw new LLMError("http", `API CBN menolak permintaan (400): ${text.slice(0, 200)}`);
+    res = await post(model, messages);
   }
   if (res.status === 401 || res.status === 403) throw new LLMError("auth", "API key CBN tidak valid");
   if (res.status === 429) throw new LLMError("rate_limit", "Batas permintaan API CBN tercapai, coba lagi sebentar");
