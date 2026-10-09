@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Inbox, Play, TriangleAlert } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { RunList } from "@/components/app/run-list";
@@ -40,7 +41,12 @@ export default function BerandaPage() {
         <div role="status" className="mb-5 flex items-start gap-3 rounded-card bg-warning-bg px-5 py-4 text-warning">
           <TriangleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />
           <p className="text-[15px]">
-            Pemakaian token sudah {formatPercent(usage.percent)} dari alokasi. Pada 95% Digital Worker berhenti memanggil AI.
+            {usage.stop
+              ? "Anggaran token sudah mencapai batas berhenti. Penugasan baru ditahan sampai alokasi ditambah."
+              : `Pemakaian token sudah ${formatPercent(usage.percent)} dari alokasi, jadi Jalur Pembanding dikunci. Pada 95% Digital Worker berhenti memanggil AI.`}{" "}
+            <Link href="/tokens" className="font-medium underline">
+              Lihat Neraca Token
+            </Link>
           </p>
         </div>
       )}

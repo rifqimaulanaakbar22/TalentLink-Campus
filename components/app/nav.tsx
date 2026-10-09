@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardPlus, LayoutGrid, Link2, type LucideIcon } from "lucide-react";
+import { ClipboardPlus, Gauge, LayoutGrid, Link2, type LucideIcon } from "lucide-react";
 import { cn } from "@/app/_lib/cn";
 
 const NAV: { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean }[] = [
   { href: "/", label: "Tim", icon: LayoutGrid, match: (p) => p === "/" || p.startsWith("/runs") },
   { href: "/tasks/new", label: "Tugaskan", icon: ClipboardPlus, match: (p) => p.startsWith("/tasks") },
+  { href: "/tokens", label: "Neraca Token", icon: Gauge, match: (p) => p.startsWith("/tokens") },
 ];
 
 export function Logo({ className }: { className?: string }) {

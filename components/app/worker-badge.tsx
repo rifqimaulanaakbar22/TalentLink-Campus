@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowUpRight, LoaderCircle, Lock, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -115,7 +116,10 @@ export function WorkerBadge({ worker, usage }: { worker: WorkerCard; usage: Toke
               className="mt-2"
             />
             <span className="mt-1 block text-[13px] text-ink-muted">
-              {formatPercent(usage.percent, 2)} terpakai, dicatat per langkah di Token Ledger.
+              {formatPercent(usage.percent, 2)} terpakai, dicatat per langkah di Token Ledger.{" "}
+              <Link href="/tokens" className="font-medium text-brand-700 hover:underline">
+                Buka Neraca Token
+              </Link>
             </span>
           </Row>
         </dl>
