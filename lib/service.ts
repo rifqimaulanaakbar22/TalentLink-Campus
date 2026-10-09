@@ -54,7 +54,7 @@ export const CreateRunSchema = z.object({
     .string({ error: "Brief wajib diisi." })
     .trim()
     .min(15, { error: "Brief terlalu pendek, minimal 15 karakter." })
-    .max(4000, { error: "Brief terlalu panjang, maksimal 4.000 karakter." }),
+    .max(20000, { error: "Teks terlalu panjang, maksimal 20.000 karakter." }),
   mode: z.enum(["v1", "v2"], { error: 'Mode harus "v1" atau "v2".' }).default("v2"),
 });
 
@@ -221,6 +221,8 @@ export function createRunFromBody(body: unknown): CreateRunResponse {
   const { workerId, brief, mode } = parsed.data;
   const worker = workers.find((w) => w.id === workerId);
   if (!worker || worker.status_rilis !== "aktif") throw new ApiError(400, MSG.comingSoon);
+  // Guidebook lomba (Jaya) boleh panjang; brief riset (Netra) cukup 4.000 karakter.
+  if (workerId !== "jaya" && brief.length > 4000) throw new ApiError(400, "Brief terlalu panjang, maksimal 4.000 karakter.");
   return { runId: createRun({ workerId, brief, mode }) };
 }
 

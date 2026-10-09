@@ -57,3 +57,22 @@ curl -X POST $B/api/runs/1/send
 - **Token per langkah:** dari `token_ledger`, dicocokkan dengan nama langkah dan rentang waktunya. Retry explain tercatat di langkah `verify`.
 - **Error API CBN** (401, 429, timeout, budget habis) muncul sebagai langkah `failed` dan `run.errorMessage`, misalnya `Batas permintaan API CBN tercapai, coba lagi sebentar`.
 - **Skenario uji mock:** `LLM_MOCK_SCENARIO=fake_ids` (ID bukti palsu → alasan template) dan `LLM_MOCK_SCENARIO=bad_json` (JSON rusak → alasan template).
+
+## Jaya (Competition Matching)
+
+Endpoint sama. `brief` berisi teks guidebook lomba (maksimal 20.000 karakter); `mode` diabaikan karena Jaya selalu memakai jalur hemat. Bentuk tambahan di `result` dijelaskan di kontrak bagian "Tambahan: Competition Matching oleh Jaya".
+
+```bash
+curl -X POST $B/api/runs -H 'Content-Type: application/json' \
+  -d '{"workerId":"jaya","brief":"Lomba Inovasi AI Nasional 2026. Mahasiswa aktif semester 3 sampai 7. Tim 3 orang, maksimal 2 tim. Peran: pengembang model AI (Python, Deep Learning), pengembang aplikasi web, presenter.","mode":"v2"}'
+# 201 {"runId":5}
+
+curl $B/api/runs/5
+# result.candidates  -> anggota semua tim, masing-masing dengan role dan team
+# result.competition -> {competitionName, teamSize, teamCount, rules, screenedCount, eligibleCount,
+#                        excluded:[{code, reasons}], teams:[{team, members, missingRoles}], conflicts:[...]}
+```
+
+Uji tanpa UI: `npm run cli -- --sample ai-nasional` atau `npm run cli -- --worker jaya --file guidebook.txt`.
+
+Catatan mode mock frontend (`NEXT_PUBLIC_API_MOCK=true`): `app/_lib/mock-store.ts` masih menolak Jaya. Uji alur Jaya dengan API asli (`LLM_MOCK=true npm run dev` cukup untuk tanpa token).

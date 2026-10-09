@@ -28,7 +28,7 @@ function sql() {
     endStep: db.prepare("UPDATE run_steps SET status = ?, ended_at = ?, detail = ? WHERE id = ?"),
     insertRun: db.prepare(
       `INSERT INTO runs (worker_id, skill, mode, brief_text, status, created_at, updated_at)
-       VALUES (?, 'research', ?, ?, 'queued', ?, ?)`,
+       VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
     ),
   };
 }
@@ -37,15 +37,19 @@ const q = () => (stmts ??= sql());
 
 export function createRun(opts: { workerId?: string; brief: string; mode: RunMode }): number {
   const now = nowIso();
-  return Number(q().insertRun.run(opts.workerId ?? "netra", opts.mode, opts.brief, now, now).lastInsertRowid);
+  const workerId = opts.workerId ?? "netra";
+  const skill = workerId === "jaya" ? "competition" : "research";
+  // Jaya selalu memakai jalur hemat (v2).
+  const mode = workerId === "jaya" ? "v2" : opts.mode;
+  return Number(q().insertRun.run(workerId, skill, mode, opts.brief, now, now).lastInsertRowid);
 }
 
-function workerName(id: string): string {
+export function workerName(id: string): string {
   return workers.find((w) => w.id === id)?.nama ?? "Digital Worker";
 }
 
 /** Pencatat langkah: setiap langkah punya waktu mulai/selesai; langkah yang sedang jalan ditandai gagal jika error. */
-class Steps {
+export class Steps {
   current: number | null = null;
   constructor(private runId: number) {}
   start(step: StepName, detail: string) {

@@ -1,7 +1,7 @@
 // Helper Route Handler: balasan error seragam { error } dan pipeline di background lewat after().
 import { after } from "next/server";
 import { ApiError, RunIdSchema, firstIssue } from "./service";
-import { runResearchMatching } from "./worker/run";
+import { runWorker } from "./worker/dispatch";
 
 export async function readJson(req: Request): Promise<unknown> {
   try {
@@ -31,7 +31,7 @@ export async function handle(fn: () => Response | Promise<Response>): Promise<Re
 /** Pipeline jalan setelah respons terkirim; error sudah ditangani run.ts sebagai langkah failed. */
 export function runInBackground(runId: number): void {
   after(async () => {
-    const status = await runResearchMatching(runId);
+    const status = await runWorker(runId);
     console.log(`[run ${runId}] selesai: ${status}`);
   });
 }

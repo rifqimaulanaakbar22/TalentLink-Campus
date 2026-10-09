@@ -1,38 +1,53 @@
 // npm run cli -- "brief" [--mode v1|v2]
+// npm run cli -- --worker jaya --file guidebook.txt   (atau --sample ai-nasional | iot-smart-campus)
+import fs from "node:fs";
 import { getSqlite } from "../lib/db";
 import { getTokenUsage, isMock } from "../lib/llm";
 import type { RunMode, RunResult } from "../lib/types";
-import { createRun, runResearchMatching } from "../lib/worker/run";
+import { createRun } from "../lib/worker/run";
+import { runWorker } from "../lib/worker/dispatch";
+import { SAMPLE_GUIDEBOOKS } from "../lib/worker/competition/guidebooks";
 
-function parseArgs(argv: string[]): { brief: string; mode: RunMode } {
+function parseArgs(argv: string[]): { brief: string; mode: RunMode; worker: "netra" | "jaya" } {
   let mode: RunMode = "v2";
+  let worker: "netra" | "jaya" = "netra";
+  let fromFile: string | null = null;
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--mode") mode = argv[++i] as RunMode;
     else if (a.startsWith("--mode=")) mode = a.slice(7) as RunMode;
-    else rest.push(a);
+    else if (a === "--worker") worker = argv[++i] as "netra" | "jaya";
+    else if (a === "--file") fromFile = fs.readFileSync(argv[++i], "utf8");
+    else if (a === "--sample") {
+      const id = argv[++i];
+      const sample = SAMPLE_GUIDEBOOKS.find((g) => g.id === id);
+      if (!sample) throw new Error(`Contoh guidebook tidak dikenal: ${id}. Pilihan: ${SAMPLE_GUIDEBOOKS.map((g) => g.id).join(", ")}`);
+      fromFile = sample.text;
+      worker = "jaya";
+    } else rest.push(a);
   }
   if (mode !== "v1" && mode !== "v2") throw new Error('Mode harus "v1" atau "v2"');
-  return { brief: rest.join(" ").trim(), mode };
+  if (worker !== "netra" && worker !== "jaya") throw new Error('Worker harus "netra" atau "jaya"');
+  return { brief: (fromFile ?? rest.join(" ")).trim(), mode, worker };
 }
 
 const pad = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s.padEnd(n));
 
 async function main() {
-  const { brief, mode } = parseArgs(process.argv.slice(2));
+  const { brief, mode, worker } = parseArgs(process.argv.slice(2));
   if (brief.length < 15) {
     console.error('Brief minimal 15 karakter. Contoh: npm run cli -- "Butuh 2 mahasiswa Python dan Computer Vision" --mode v2');
     process.exit(1);
   }
 
   const db = getSqlite();
-  const runId = createRun({ brief, mode });
-  console.log(`Run #${runId} · mode ${mode}${isMock() ? " · LLM_MOCK" : ""}`);
-  console.log(`Brief: ${brief}\n`);
+  const runId = createRun({ workerId: worker, brief, mode });
+  console.log(`Run #${runId} · ${worker} · mode ${worker === "jaya" ? "v2" : mode}${isMock() ? " · LLM_MOCK" : ""}`);
+  console.log(`Brief: ${brief.length > 300 ? `${brief.slice(0, 300)}…` : brief}\n`);
 
   const t0 = Date.now();
-  const status = await runResearchMatching(runId);
+  const status = await runWorker(runId);
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
   const steps = db
@@ -60,17 +75,30 @@ async function main() {
   console.log(`\nStatus: ${status} (${elapsed} detik)`);
   if (status === "failed") console.log(`Error: ${run.error_message}`);
   if (status === "needs_clarification") {
-    console.log(`Pertanyaan Netra: ${JSON.parse(run.criteria_json ?? "{}").question}`);
+    console.log(`Pertanyaan ${worker === "jaya" ? "Jaya" : "Netra"}: ${JSON.parse(run.criteria_json ?? "{}").question}`);
   }
 
   if (run.result_json) {
     const r = JSON.parse(run.result_json) as RunResult;
     console.log(`Topik: ${r.topic} · wajib: ${r.requiredSkills.join(", ")}${r.niceSkills.length ? ` · tambahan: ${r.niceSkills.join(", ")}` : ""}`);
     if (r.unknownSkills.length) console.log(`Skill tak dikenal: ${r.unknownSkills.join(", ")}`);
-    if (r.noMatch) console.log("Tidak ada kandidat dengan skor ≥ 50 — kandidat terdekat:");
+    if (r.competition) {
+      const c = r.competition;
+      console.log(`Lomba: ${c.competitionName} · tim ${c.teamSize} orang × ${c.teamCount}`);
+      console.log(`Syarat: ${c.rules.join(" · ")}`);
+      console.log(`Eligibility Check: ${c.eligibleCount} dari ${c.screenedCount} memenuhi syarat; ${c.excluded.length} tersaring`);
+      for (const e of c.excluded.slice(0, 6)) console.log(`  ✗ ${e.code}: ${e.reasons.join("; ")}`);
+      if (c.excluded.length > 6) console.log(`  … ${c.excluded.length - 6} lainnya`);
+      for (const t of c.teams) {
+        console.log(`Tim ${t.team}: ${t.members.map((m) => `${m.code} (${m.role}, ${m.roleScore})`).join(", ") || "-"}`);
+        if (t.missingRoles.length) console.log(`  Peran belum terisi: ${t.missingRoles.join(", ")}`);
+      }
+      console.log(`Konflik: ${c.conflicts.length ? "" : "tidak ada"}`);
+      for (const k of c.conflicts) console.log(`  ⚠ ${k.message}`);
+    } else if (r.noMatch) console.log("Tidak ada kandidat dengan skor ≥ 50 — kandidat terdekat:");
     console.log(`\n  #  ${pad("Kode", 6)} ${pad("Skor", 6)} ${pad("Badge", 30)} Alasan [ID bukti]`);
     r.candidates.forEach((c, i) => {
-      const badges = [c.hiddenTalent && "Hidden Talent", c.fairExposure && "Fair Exposure", c.reasonSource === "template" && "template"]
+      const badges = [c.role && `T${c.team} ${c.role}`, c.hiddenTalent && "Hidden Talent", c.fairExposure && "Fair Exposure", c.reasonSource === "template" && "template"]
         .filter(Boolean)
         .join(", ");
       const score = c.score === null ? "-" : c.score.toFixed(1);

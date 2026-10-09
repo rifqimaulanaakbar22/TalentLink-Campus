@@ -9,6 +9,8 @@ vi.hoisted(() => {
 import { getSqlite } from "./db";
 import { seedDatabase } from "./seed";
 import { runResearchMatching } from "./worker/run";
+import { runWorker } from "./worker/dispatch";
+import { SAMPLE_GUIDEBOOKS } from "./worker/competition/guidebooks";
 import {
   ApiError,
   MSG,
@@ -58,8 +60,14 @@ describe("POST /api/runs", () => {
     expectApiError(() => createRunFromBody({ workerId: "netra", brief: "Butuh CV", mode: "v2" }), 400, "Brief terlalu pendek, minimal 15 karakter.");
   });
 
-  it("worker selain netra ditolak 400 segera hadir", () => {
-    expectApiError(() => createRunFromBody({ workerId: "jaya", brief: CV_BRIEF, mode: "v2" }), 400, MSG.comingSoon);
+  it("worker yang belum dirilis (kanca) ditolak 400 segera hadir", () => {
+    expectApiError(() => createRunFromBody({ workerId: "kanca", brief: CV_BRIEF, mode: "v2" }), 400, MSG.comingSoon);
+  });
+
+  it("brief Netra maksimal 4.000 karakter; guidebook Jaya boleh lebih panjang", () => {
+    const long = `Butuh mahasiswa Python. ${"x".repeat(4100)}`;
+    expectApiError(() => createRunFromBody({ workerId: "netra", brief: long, mode: "v2" }), 400, "Brief terlalu panjang, maksimal 4.000 karakter.");
+    expect(createRunFromBody({ workerId: "jaya", brief: long, mode: "v1" }).runId).toBeGreaterThan(0);
   });
 
   it("worker tak dikenal dan mode salah ditolak 400", () => {
@@ -249,7 +257,8 @@ describe("endpoint baca", () => {
   it("GET /api/worker: status, budget, token per worker", async () => {
     const w = getWorkers();
     expect(w.workers.find((x) => x.id === "netra")!.status).toBe("siap");
-    expect(w.workers.find((x) => x.id === "jaya")!.status).toBe("segera_hadir");
+    expect(w.workers.find((x) => x.id === "jaya")!.status).toBe("siap");
+    expect(w.workers.find((x) => x.id === "kanca")!.status).toBe("segera_hadir");
     expect(w.usage.budget).toBe(10_000_000);
     const { runId } = createRunFromBody({ workerId: "netra", brief: CV_BRIEF, mode: "v2" });
     const busy = getWorkers().workers.find((x) => x.id === "netra")!;
@@ -294,5 +303,79 @@ describe("seed", () => {
 
     seedDatabase(db, { resetLedger: true });
     expect(total()).toBe(0);
+  });
+});
+
+describe("Competition Matching (Jaya) lewat API", () => {
+  const guidebook = (id: string) => SAMPLE_GUIDEBOOKS.find((g) => g.id === id)!.text;
+  async function runJaya(text: string) {
+    const { runId } = createRunFromBody({ workerId: "jaya", brief: text, mode: "v1" });
+    await runWorker(runId);
+    return runId;
+  }
+
+  it("guidebook AI: tim tersusun, tanpa dobel, alasan berbukti, 7 langkah sama", async () => {
+    const id = await runJaya(guidebook("ai-nasional"));
+    const d = getRunDetail(id);
+    expect(d.run.status).toBe("awaiting_approval");
+    expect(d.run.mode).toBe("v2"); // Jaya selalu jalur hemat
+    expect(d.steps.map((s) => s.step)).toEqual(["parse", "normalize", "search", "score", "explain", "verify", "brief"]);
+    const c = d.result!.competition!;
+    expect(c.teamSize).toBe(3);
+    expect(c.teamCount).toBe(2);
+    const codes = c.teams.flatMap((t) => t.members.map((m) => m.code));
+    expect(new Set(codes).size).toBe(codes.length);
+    expect(d.result!.candidates.map((x) => x.code)).toEqual(codes);
+    for (const m of d.result!.candidates) {
+      expect(m.role).toBeTruthy();
+      expect(m.team).toBeGreaterThanOrEqual(1);
+      for (const r of m.reasons) for (const e of r.evidence_ids) expect(m.evidenceIds).toContain(e);
+    }
+  });
+
+  it("AC-14: mahasiswa tidak aktif tersaring dengan alasan tertulis", async () => {
+    const id = await runJaya(guidebook("ai-nasional"));
+    const c = getRunDetail(id).result!.competition!;
+    expect(c.excluded.find((e) => e.code === "S-108")!.reasons).toContain("Berstatus cuti, bukan mahasiswa aktif");
+    expect(c.excluded.every((e) => e.reasons.length > 0)).toBe(true);
+    expect(c.eligibleCount + c.excluded.length).toBe(c.screenedCount);
+    const members = c.teams.flatMap((t) => t.members.map((m) => m.code));
+    expect(members.some((m) => c.excluded.some((e) => e.code === m))).toBe(false);
+  });
+
+  it("guidebook IoT: syarat prodi menyaring prodi lain dan S-106 masuk tim", async () => {
+    const id = await runJaya(guidebook("iot-smart-campus"));
+    const c = getRunDetail(id).result!.competition!;
+    expect(c.rules).toContain("Prodi: Teknik Komputer, Teknik Informatika");
+    expect(c.excluded.some((e) => e.reasons.some((r) => r.startsWith("Prodi Teknologi Game")))).toBe(true);
+    expect(c.teams[0].members.map((m) => m.code)).toContain("S-106");
+  });
+
+  it("guidebook tanpa jumlah anggota dan bidang -> needs_clarification", async () => {
+    const id = await runJaya("Kami ingin mengirim mahasiswa ke sebuah lomba tahun ini.");
+    const d = getRunDetail(id);
+    expect(d.run.status).toBe("needs_clarification");
+    expect(d.run.clarificationQuestion).toBeTruthy();
+  });
+
+  it("Conflict Check lintas unit: anggota yang baru disetujui riset Netra diberi peringatan", async () => {
+    const netra = await runBrief(CV_BRIEF);
+    const shortlist = getRunDetail(netra).result!.candidates.map((c) => c.code);
+    approveRun(netra, { decision: "approved", candidateCodes: shortlist, messageDraft: "x" });
+    const id = await runJaya(guidebook("ai-nasional"));
+    const c = getRunDetail(id).result!.competition!;
+    const overlap = c.teams.flatMap((t) => t.members.map((m) => m.code)).filter((m) => shortlist.includes(m));
+    expect(overlap.length).toBeGreaterThan(0);
+    for (const code of overlap) {
+      expect(c.conflicts).toContainEqual(expect.objectContaining({ code, kind: "research_invite" }));
+    }
+  });
+
+  it("approve dan kirim SIMULASI berlaku sama untuk usulan tim", async () => {
+    const id = await runJaya(guidebook("ai-nasional"));
+    const members = getRunDetail(id).result!.competition!.teams[0].members.map((m) => m.code);
+    expectApiError(() => sendInvitation(id), 403, MSG.needApproval);
+    approveRun(id, { decision: "approved", candidateCodes: members, messageDraft: "Undangan seleksi" });
+    expect(sendInvitation(id).label).toBe("SIMULASI");
   });
 });

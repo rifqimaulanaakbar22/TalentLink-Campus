@@ -2,6 +2,7 @@
 import type Database from "better-sqlite3";
 import type { EvidenceType, Grade, StudentStatus } from "./types";
 import { resetSkillCache } from "./worker/normalize";
+import { PRODI } from "./worker/competition/eligibility";
 
 // PRNG ber-seed tetap; Math.random dilarang agar hasil seed selalu sama.
 function mulberry32(seed: number) {
@@ -14,7 +15,6 @@ function mulberry32(seed: number) {
   };
 }
 
-const PRODI = ["Teknik Informatika", "Sains Data Terapan", "Teknik Komputer", "Teknologi Game"] as const;
 
 // id skill = indeks + 1
 const SKILLS: { name: string; aliases: string[]; course: string }[] = [
