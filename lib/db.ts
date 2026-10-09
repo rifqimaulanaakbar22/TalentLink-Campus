@@ -100,7 +100,7 @@ export const DATABASE_PATH = process.env.DATABASE_PATH || "data/talentlink.db";
 
 function open(): Database.Database {
   if (DATABASE_PATH !== ":memory:") {
-    fs.mkdirSync(path.dirname(path.resolve(DATABASE_PATH)), { recursive: true });
+    fs.mkdirSync(path.dirname(path.resolve(/*turbopackIgnore: true*/ DATABASE_PATH)), { recursive: true });
   }
   const conn = new Database(DATABASE_PATH);
   conn.pragma("journal_mode = WAL");

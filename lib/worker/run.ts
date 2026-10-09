@@ -95,14 +95,16 @@ export async function runResearchMatching(runId: number): Promise<RunStatus> {
     let criteria: Criteria | null = run.criteria_json ? (JSON.parse(run.criteria_json) as Criteria) : null;
     if (!criteria || criteria.needs_clarification) {
       steps.start("parse", `${name} membaca brief dosen…`);
+      // Sesuai skill backend-efisien: hanya explain yang boleh di-retry; parse cukup sekali.
       let parsed;
       try {
         llmCalls++;
         parsed = await parseBrief(runId, run.brief_text);
       } catch (err) {
-        if (!(err instanceof LLMError && err.code === "bad_json")) throw err;
-        llmCalls++;
-        parsed = await parseBrief(runId, run.brief_text);
+        if (err instanceof LLMError && err.code === "bad_json") {
+          throw new LLMError("bad_json", `${name} tidak bisa membaca jawaban AI saat memahami brief. Silakan coba lagi.`);
+        }
+        throw err;
       }
       budgetWarning ||= parsed.budgetWarning;
       criteria = parsed.data;
