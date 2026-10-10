@@ -89,7 +89,7 @@ sequenceDiagram
   Netra->>Data: 3. search: mahasiswa aktif + bukti skill wajib (1 query SQL)
   Netra->>Netra: 4. score 0–100, Hidden Talent, Fair Exposure (kode)
   Netra->>Netra: 5. explain: alasan + ID bukti (LLM, top 5, maks 4 bukti)
-  Netra->>Netra: 6. verify ID bukti; retry sekali; fallback template (kode)
+  Netra->>Netra: 6. verify ID bukti, retry sekali, lalu fallback template (kode)
   Netra-->>Dosen: 7. Link Brief + draf undangan
   Dosen->>Netra: Setujui dan undang
   Netra-->>Dosen: Undangan terkirim (SIMULASI)
