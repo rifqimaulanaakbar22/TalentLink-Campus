@@ -288,6 +288,8 @@ Status run menentukan apa yang tampil di layar Detail run: kotak jawab saat menu
 - Setiap klaim AI punya chip bukti; tidak ada teks AI tanpa sumber.
 - Label SIMULASI berwarna kuning, label Sintetis abu-abu, selalu terlihat tanpa hover.
 - Alur demo bisa diselesaikan dalam 6 klik dari Beranda sampai undangan disetujui.
+- Gaya retro arcade: tombol 3D yang tenggelam saat ditekan, kartu terangkat dengan bayangan keras saat disorot, kartu muncul bertahap saat di-scroll. Gerak mati jika pengguna memilih kurangi gerakan.
+- Di HP, navigasi berupa dock ikon yang melayang di bawah layar seperti aplikasi HP; di tablet dan desktop tetap rail di kiri.
 
 ## Kriteria penerimaan
 
@@ -676,3 +678,4 @@ Rilis dibagi dalam empat checkpoint; setiap checkpoint menentukan apakah cakupan
 | 9 Okt 2026, malam | Layar disesuaikan dengan mockup: istilah CBN Digital Worker, form Tugaskan satu kartu, "Setujui dan undang" satu klik, peran di bar atas | Penyederhanaan alur dan bahasa bisnis CBN |
 | 10 Okt 2026, dini hari | Ditambah fitur login dan logout email + kata sandi: US-16, US-17, FR-A1–A8, NFR-9, NFR-10, AC-15–AC-20, layar Masuk, akun demo, tabel `users` dan `sessions`, risiko baru. Login dikeluarkan dari daftar "Tidak masuk rilis" | Permintaan tim; keputusan persetujuan perlu tercatat atas nama orang yang login |
 | 10 Okt 2026 | Ditambah Neraca Token dan Jalur Hemat: US-18, US-19, FR-T1–T8, NFR-11, AC-21–AC-25, layar Neraca Token, pilihan jalur di form Tugaskan (menggantikan centang "mode pembanding"), rem anggaran 409 di server, risiko baru. FR-R1, AI-6, AI-7, dan metrik Hemat token diperbarui. ERD tidak berubah | Permintaan tim; kriteria AI token efficiency perlu terlihat di aplikasi setelah halaman Rapor ditunda |
+| 10 Okt 2026 | Revisi UI: tombol 3D gaya retro arcade dengan efek tekan, kartu terangkat saat disorot, kartu muncul saat di-scroll (CSS scroll-driven, menghormati kurangi gerakan), dan dock navigasi melayang di HP menggantikan navigasi pill di bar atas | Permintaan tim agar tampilan lebih menarik dan nyaman dipakai di HP |

@@ -72,6 +72,19 @@ Sumber: `design/inspiration/01–04`. Tokens ini diterapkan di `app/globals.css`
 | Jarak antar kartu | 20px |
 | `shadow-card` | `0 1px 2px rgb(16 24 40 / .04), 0 6px 20px rgb(16 24 40 / .04)` |
 | `shadow-glow` | `0 0 0 4px rgb(27 168 236 / .10), 0 10px 30px rgb(27 168 236 / .12)` (hanya kartu sorotan) |
+| `line-strong` | `#cdd4dd`, sisi bawah tombol 3D netral dan bayangan keras kartu saat disorot |
+
+## Gaya retro arcade
+
+Inspirasi 06 adalah set tombol game retro dari stok gambar berlisensi (bertanda air), jadi **tidak disimpan** di `design/inspiration/`. Yang diambil hanya polanya: tombol tebal dengan sisi bawah lebih gelap yang tenggelam saat ditekan. Warna tombol tema tetap sama.
+
+| Unsur | Nilai |
+| --- | --- |
+| Sisi tombol | Bayangan keras `0 4px 0` (tombol kecil 3px, chip 2px), tanpa blur. Warna: `brand-900` untuk tombol `brand-600` dan tombol putih di kartu biru; `line-strong` untuk tombol putih |
+| Kilap atas | `inset 0 2px 0 rgb(255 255 255 / .22)` |
+| Ditekan | Turun setebal sisi dalam 40ms; aktif (menu dibuka) tertahan turun |
+| Gerak | `steps(2)` untuk tombol, `steps(3)` kartu, `steps(4)` muncul saat scroll dan dock, agar terasa 8-bit |
+| Dock HP | Pill putih, garis 2px `line-strong`, bayangan `0 6px 0 line-strong` + bayangan lembut agar terpisah dari konten |
 
 ## Pola komponen
 
@@ -79,6 +92,6 @@ Sumber: `design/inspiration/01–04`. Tokens ini diterapkan di `app/globals.css`
 - **Kartu sorotan:** border 1,5px `brand-300` + `shadow-glow`. Maksimal satu per layar (worker aktif, kandidat terpilih).
 - **Kartu biru penuh:** `brand-600` + pola sirkuit putih 10% opasitas. Maksimal satu per layar.
 - **Gelembung ikon:** lingkaran 40px, latar `panel`, ikon `brand-500` 20px.
-- **Tombol utama:** pill `brand-600`, teks putih 15px medium. Tombol sekunder: pill putih bergaris `line`.
+- **Tombol utama:** pill `brand-600`, teks putih 15px medium, sisi 3D `brand-900`. Tombol sekunder: pill putih bergaris `line`, sisi 3D `line-strong`. Lihat "Gaya retro arcade".
 - **Field:** border `line`, fokus `brand-500`, label kecil menempel di garis atas.
 - **Fokus keyboard:** ring 2px `brand-500` dengan offset 2px, selalu terlihat.

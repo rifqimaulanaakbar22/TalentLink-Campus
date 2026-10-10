@@ -44,7 +44,7 @@ Data selalu lewat `app/_lib/api.ts` dan state lewat `useApi` (`app/_lib/use-api.
 - Badge kandidat: `hidden` (Hidden Talent), `fair` (Fair Exposure).
 - Warna worker `netra` dan `jaya` hanya sebagai cincin atau garis tipis, tidak pernah sebagai latar luas. Cakupan MVP hanya Netra dan Jaya (`DISPLAYED_WORKERS` di `app/_lib/worker-profile.ts`).
 - Bentuk: `rounded-card` (20px), `rounded-panel` (32px), `rounded-field` (12px), `rounded-full` untuk tombol, chip, badge.
-- Bayangan: `shadow-card` di kartu biasa, `shadow-glow` hanya di kartu sorotan.
+- Bayangan: `shadow-card` di kartu biasa, `shadow-glow` hanya di kartu sorotan. Bayangan keras gaya retro hanya lewat kelas di bagian "Gaya retro arcade".
 - Font: `font-sans` (Outfit) untuk teks, `font-mono` (JetBrains Mono) untuk ID bukti, kode mahasiswa, token, durasi, skor.
 
 ## Skala teks
@@ -60,7 +60,7 @@ Data selalu lewat `app/_lib/api.ts` dan state lewat `useApi` (`app/_lib/use-api.
 
 - Satu layar memakai susunan bento: ukuran kartu berbeda, jarak `gap-5`, bagian dipisah `mt-10`.
 - Grid mulai satu kolom di layar kecil, dua kolom di `sm`, tiga kolom di `lg`. Cek angka besar tidak terpotong di lebar 768.
-- Rail navigasi tampil mulai `md`; di bawahnya navigasi pill di top bar.
+- Rail navigasi tampil mulai `md`. Di bawah `md` navigasi pindah ke dock melayang di bawah layar (`NavDock` di `components/app/nav.tsx`): hanya ikon, nama lewat `aria-label`, jarak bawah mengikuti safe area. `main` memberi ruang `pb-36` di HP agar konten terakhir tidak tertutup dock.
 
 ## Halaman login
 
@@ -69,6 +69,19 @@ Data selalu lewat `app/_lib/api.ts` dan state lewat `useApi` (`app/_lib/use-api.
 - Tanpa tombol Google atau media sosial. Pemisah "atau pakai akun demo" diikuti kartu akun demo berlabel Sintetis.
 - Pesan login gagal selalu "Email atau kata sandi salah." (jangan bocorkan email mana yang terdaftar).
 - Setelah login atau saat sesi berakhir, pakai navigasi penuh agar layout membaca ulang sesi.
+
+## Gaya retro arcade (tombol, kartu, dock)
+
+Satu bahasa visual dari inspirasi tombol game retro: bayangan keras tanpa blur berwarna lebih gelap dari elemennya, dan gerak bertahap `steps()` seperti game 8-bit. Semua kelas ada di `app/globals.css`.
+
+- **Tombol 3D:** `btn-3d`. Warna sisi lewat `[--edge:var(--color-…)]`, tebal sisi lewat `[--depth:3px]` (bawaan 4px). Saat ditekan tombol tenggelam setebal sisinya. `Button` dan `ButtonLink` sudah memakainya, kecuali varian `ghost` yang tetap datar.
+- **Pilihan aktif** (menu, tab worker, chip bukti yang dibuka): tambah `is-active`, tampil seperti tombol yang tertahan ke bawah.
+- **Area klik lebih besar dari tombolnya** (misalnya ikon rail beserta labelnya): beri `btn-3d-host` pada pembungkus agar efek tekan tetap muncul.
+- **Kartu:** `Card` sudah memakai `reveal card-lift`. `card-lift` mengangkat kartu 3px dengan sisi keras saat disorot (hanya perangkat dengan pointer); warna sisi lewat `[--lift-edge:…]`. Kartu buatan sendiri yang tidak memakai `Card` ikut memakai dua kelas ini.
+- **Muncul saat scroll:** `reveal` memakai CSS scroll-driven (`animation-timeline: view()`), selesai setelah elemen masuk 140px. Jangan diganti persen tinggi elemen: kartu tinggi akan tampil setengah transparan saat halaman dibuka.
+- Jangan menulis nilai bawaan `--edge`, `--depth`, atau `--lift-*` di dalam kelas tanpa layer; pakai fallback `var(--edge, …)`. Aturan tanpa layer mengalahkan utilitas Tailwind.
+- Semua gerak mati saat `prefers-reduced-motion: reduce`. Browser tanpa dukungan scroll-driven langsung menampilkan konten.
+- Jangan menambah animasi lain di luar sistem ini (misalnya fade per bagian dengan JavaScript).
 
 ## Neraca Token dan Jalur Hemat
 
@@ -111,9 +124,9 @@ Profil kerja (ID pegawai, knowledge base, akses, siklus hidup) ada di `app/_lib/
 ## Larangan (aturan anti AI slop dari PRD)
 
 - Tanpa gradien, termasuk gradien biru atau ungu-biru. Pakai `Card variant="feature"` jika butuh sorotan.
-- Tanpa glassmorphism, tanpa emoji atau ikon 3D. Ikon hanya Lucide.
+- Tanpa glassmorphism, tanpa emoji atau ikon 3D. Ikon hanya Lucide. Tombol 3D gaya retro diperbolehkan lewat `btn-3d`.
 - Tanpa hero ala landing page, tanpa lorem ipsum, tanpa grid kartu identik di semua layar.
-- Tanpa `rounded-3xl` dan bayangan tebal di semua elemen.
+- Tanpa `rounded-3xl` dan bayangan blur tebal di semua elemen. Bayangan keras retro hanya lewat `btn-3d`, `card-lift`, dan dock.
 - Teks putih tidak boleh di atas `brand-500` (kontras gagal). Pakai `brand-600`.
 - Jangan menampilkan teks AI tanpa chip bukti.
 - Istilah teknis (nama tool, nama model, nama langkah) hanya di Run Timeline. Di tempat lain pakai `TOOL_LABEL` dan `RUN_STATUS_LABEL`.
