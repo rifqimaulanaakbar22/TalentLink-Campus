@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Outfit } from "next/font/google";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   title: "TalentLink Campus",
   description: "Digital Worker AI yang menghubungkan mahasiswa ke riset dan lomba, dengan bukti.",
 };
+
+// viewport-fit=cover agar dock navigasi HP bisa memakai env(safe-area-inset-bottom) di iPhone.
+export const viewport: Viewport = { viewportFit: "cover", themeColor: "#eef0f3" };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Validasi sesi yang sebenarnya (ke database). Proxy hanya memeriksa ada tidaknya cookie.

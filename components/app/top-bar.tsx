@@ -1,13 +1,13 @@
 import { SintetisBadge } from "@/components/ui/badge";
 import type { AuthUser } from "@/lib/auth-types";
 import { MockBadge } from "./mock-badge";
-import { Logo, NavMobile } from "./nav";
+import { Logo } from "./nav";
 import { UserMenu } from "./user-menu";
 
 /** Bar atas: identitas produk di kiri, pengguna yang login dan tombol Keluar di kanan. */
 export function TopBar({ user }: { user: AuthUser | null }) {
   return (
-    <header className="flex flex-col gap-4 px-4 pt-5 pb-2 sm:px-8 md:pt-7 lg:px-10">
+    <header className="px-4 pt-5 pb-2 sm:px-8 md:pt-7 lg:px-10">
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <Logo className="size-10 md:hidden" />
@@ -26,7 +26,6 @@ export function TopBar({ user }: { user: AuthUser | null }) {
           {user && <UserMenu user={user} />}
         </div>
       </div>
-      <NavMobile />
     </header>
   );
 }

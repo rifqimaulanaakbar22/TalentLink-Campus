@@ -23,7 +23,7 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
-/** Rail ikon vertikal di kiri (inspirasi 03–04). Hanya tampil mulai layar md. */
+/** Rail ikon vertikal di kiri (inspirasi 03–04). Hanya tampil mulai layar md. Ikon berupa tombol 3D retro. */
 export function NavRail() {
   const pathname = usePathname();
   return (
@@ -37,16 +37,9 @@ export function NavRail() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className="group flex flex-col items-center gap-1.5 rounded-2xl"
+                className="btn-3d-host group flex flex-col items-center gap-2 rounded-2xl"
               >
-                <span
-                  className={cn(
-                    "flex size-11 items-center justify-center rounded-full transition-colors",
-                    active
-                      ? "bg-brand-100 text-brand-600"
-                      : "bg-surface text-ink-muted shadow-card group-hover:text-brand-600",
-                  )}
-                >
+                <span className={cn("btn-3d flex size-11 items-center justify-center rounded-full border", itemTone(active))}>
                   <Icon aria-hidden className="size-5" />
                 </span>
                 <span className={cn("text-[11px] leading-4", active ? "font-medium text-brand-700" : "text-ink-muted")}>
@@ -61,12 +54,25 @@ export function NavRail() {
   );
 }
 
-/** Navigasi pill horizontal untuk layar kecil. */
-export function NavMobile() {
+/** Menu aktif tampil seperti tombol retro yang tertahan ke bawah (is-active di globals.css). */
+function itemTone(active: boolean) {
+  return active
+    ? "is-active border-brand-700 bg-brand-600 text-white [--edge:var(--color-brand-900)]"
+    : "border-line bg-surface text-ink-muted group-hover:text-brand-600 hover:text-brand-600";
+}
+
+/**
+ * Dock melayang di bawah layar untuk HP (di bawah md), seperti aplikasi HP: hanya ikon,
+ * namanya tetap terbaca pembaca layar lewat aria-label. Jarak bawah mengikuti safe area iPhone.
+ */
+export function NavDock() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Navigasi utama" className="md:hidden">
-      <ul className="flex gap-2 overflow-x-auto pb-1">
+    <nav
+      aria-label="Navigasi utama"
+      className="dock-in pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
+    >
+      <ul className="pointer-events-auto flex items-center gap-4 rounded-full border-2 border-line-strong bg-surface px-4 pt-3 pb-4 shadow-[0_6px_0_var(--color-line-strong),0_14px_32px_rgb(16_24_40/0.14)]">
         {NAV.map(({ href, label, icon: Icon, match }) => {
           const active = match(pathname);
           return (
@@ -74,13 +80,11 @@ export function NavMobile() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={cn(
-                  "inline-flex h-9 items-center gap-2 rounded-full px-4 text-[13px] whitespace-nowrap",
-                  active ? "bg-brand-100 font-medium text-brand-700" : "bg-surface text-ink-muted shadow-card",
-                )}
+                aria-label={label}
+                title={label}
+                className={cn("btn-3d flex size-12 items-center justify-center rounded-full border", itemTone(active))}
               >
-                <Icon aria-hidden className="size-4" />
-                {label}
+                <Icon aria-hidden className="size-5" />
               </Link>
             </li>
           );

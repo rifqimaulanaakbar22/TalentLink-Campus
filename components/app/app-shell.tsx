@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { AuthUser } from "@/lib/auth-types";
-import { NavRail } from "./nav";
+import { NavDock, NavRail } from "./nav";
 import { TopBar } from "./top-bar";
 
 /** Halaman tanpa kerangka aplikasi (navigasi dan bar atas). */
@@ -21,10 +21,12 @@ export function AppShell({ user, children }: { user: AuthUser | null; children: 
       <NavRail />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar user={user} />
-        <main id="konten" className="flex-1 px-4 pb-12 sm:px-8 lg:px-10">
+        {/* Di HP, ruang bawah untuk dock navigasi yang melayang. */}
+        <main id="konten" className="flex-1 px-4 pb-36 sm:px-8 md:pb-12 lg:px-10">
           {children}
         </main>
       </div>
+      <NavDock />
     </div>
   );
 }
