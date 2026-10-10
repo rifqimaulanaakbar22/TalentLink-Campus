@@ -153,7 +153,7 @@ export function LoginForm({
                   type="button"
                   onClick={() => fillDemo(a)}
                   disabled={busy}
-                  className="flex w-full items-center gap-3 rounded-field border border-line bg-surface p-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50/50 disabled:opacity-60"
+                  className="btn-3d flex w-full items-center gap-3 rounded-field border border-line bg-surface p-3 text-left [--depth:3px] hover:border-brand-300 hover:bg-brand-50/50 disabled:opacity-60"
                 >
                   <Mascot workerId={WORKER_OF[a.role]} size={32} decorative className="ring-1 ring-offset-1" />
                   <span className="min-w-0">

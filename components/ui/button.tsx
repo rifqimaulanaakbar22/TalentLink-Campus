@@ -8,17 +8,19 @@ type ButtonSize = "sm" | "md" | "lg";
 const BASE =
   "inline-flex items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
+// Warna tombol tidak berubah. btn-3d (app/globals.css) menambah sisi bawah 3D bergaya retro arcade
+// berwarna --edge dan efek tenggelam saat ditekan. Ghost tetap datar karena dipakai seperti tautan.
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: "bg-brand-600 text-white hover:bg-brand-700",
-  secondary: "bg-surface text-ink border border-line hover:bg-panel",
-  ghost: "text-brand-700 hover:bg-brand-50",
+  primary: "btn-3d [--edge:var(--color-brand-900)] bg-brand-600 text-white hover:bg-brand-700",
+  secondary: "btn-3d bg-surface text-ink border border-line hover:bg-panel",
+  ghost: "text-brand-700 hover:bg-brand-50 active:translate-y-px",
   // Tombol putih di atas kartu biru penuh ("View Detail" di inspirasi)
-  inverse: "bg-white text-brand-700 hover:bg-brand-50",
-  danger: "bg-surface text-danger border border-line hover:bg-danger-bg",
+  inverse: "btn-3d [--edge:var(--color-brand-900)] bg-white text-brand-700 hover:bg-brand-50",
+  danger: "btn-3d bg-surface text-danger border border-line hover:bg-danger-bg",
 };
 
 const SIZE: Record<ButtonSize, string> = {
-  sm: "h-9 px-4 text-[13px]",
+  sm: "h-9 px-4 text-[13px] [--depth:3px]",
   md: "h-11 px-5 text-[15px]",
   lg: "h-12 px-7 text-[15px]",
 };

@@ -7,9 +7,9 @@ const VARIANT: Record<CardVariant, string> = {
   // Kartu putih tanpa garis, bayangan sangat tipis (inspirasi 02–04)
   default: "bg-surface shadow-card",
   // Kartu sorotan bergaris biru dengan cahaya halus. Maksimal satu per layar.
-  highlight: "bg-surface border-[1.5px] border-brand-300 shadow-glow",
+  highlight: "bg-surface border-[1.5px] border-brand-300 shadow-glow [--lift-base:var(--shadow-glow)] [--lift-edge:var(--color-brand-300)]",
   // Kartu biru penuh dengan pola sirkuit, pengganti gradien. Maksimal satu per layar.
-  feature: "bg-brand-600 text-white pattern-circuit shadow-card",
+  feature: "bg-brand-600 text-white pattern-circuit shadow-card [--lift-edge:var(--color-brand-900)]",
 };
 
 export function Card({
@@ -17,7 +17,8 @@ export function Card({
   className,
   ...props
 }: HTMLAttributes<HTMLElement> & { variant?: CardVariant }) {
-  return <section className={cn("rounded-card p-5 sm:p-6", VARIANT[variant], className)} {...props} />;
+  // reveal: muncul bertahap saat di-scroll; card-lift: terangkat dengan bayangan keras saat disorot (globals.css).
+  return <section className={cn("reveal card-lift rounded-card p-5 sm:p-6", VARIANT[variant], className)} {...props} />;
 }
 
 export function CardHeader({

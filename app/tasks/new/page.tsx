@@ -31,10 +31,10 @@ export default async function TugasBaruPage({
                   href={`/tasks/new?worker=${id}`}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex items-center gap-2.5 rounded-full py-1.5 pr-4 pl-1.5 text-[13px] transition-colors",
+                    "btn-3d inline-flex items-center gap-2.5 rounded-full border py-1.5 pr-4 pl-1.5 text-[13px] [--depth:3px]",
                     active
-                      ? "bg-brand-100 font-medium text-brand-700"
-                      : "bg-surface text-ink-muted shadow-card hover:text-ink",
+                      ? "is-active border-brand-300 bg-brand-100 font-medium text-brand-700 [--edge:var(--color-brand-300)]"
+                      : "border-line bg-surface text-ink-muted hover:text-ink",
                   )}
                 >
                   <Mascot workerId={id} size={28} decorative />

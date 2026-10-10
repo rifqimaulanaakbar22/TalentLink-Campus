@@ -34,7 +34,7 @@ export function WorkerBadge({ worker, usage }: { worker: WorkerCard; usage: Toke
   return (
     <section
       aria-labelledby={`nama-${worker.id}`}
-      className="flex h-full flex-col overflow-hidden rounded-card bg-surface shadow-card"
+      className="reveal card-lift flex h-full flex-col overflow-hidden rounded-card bg-surface shadow-card"
     >
       {/* Pita identitas, seperti kartu pegawai */}
       <div className="pattern-circuit flex flex-wrap items-center gap-x-5 gap-y-4 bg-brand-600 px-6 py-6 text-white sm:px-8">

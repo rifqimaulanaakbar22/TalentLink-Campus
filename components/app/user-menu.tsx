@@ -58,7 +58,7 @@ export function UserMenu({ user }: { user: AuthUser }) {
           onClick={logout}
           disabled={busy}
           aria-label={`Keluar dari akun ${user.email}`}
-          className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-ink-muted transition-colors hover:bg-panel hover:text-ink disabled:opacity-60"
+          className="btn-3d ml-1 inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[13px] font-medium text-ink-muted [--depth:3px] hover:bg-panel hover:text-ink disabled:opacity-60"
         >
           {busy ? (
             <LoaderCircle aria-hidden className="size-4 animate-spin" />

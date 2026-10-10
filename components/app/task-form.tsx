@@ -100,7 +100,7 @@ export function TaskForm({ workerId = "netra" }: { workerId?: WorkerId }) {
                   setBrief(ex.text);
                   setFieldError(undefined);
                 }}
-                className="h-full w-full rounded-field border border-line bg-surface p-3 text-left text-[13px] leading-4.5 text-ink-muted transition-colors hover:border-brand-300 hover:text-ink"
+                className="btn-3d h-full w-full rounded-field border border-line bg-surface p-3 text-left text-[13px] leading-4.5 text-ink-muted [--depth:3px] hover:border-brand-300 hover:text-ink"
               >
                 {ex.label}
               </button>

@@ -9,6 +9,8 @@
   --color-panel: #f7f8fa;
   --color-surface: #ffffff;
   --color-line: #e7eaee;
+  /* Sisi bawah tombol 3D dan bayangan keras kartu (gaya retro arcade) */
+  --color-line-strong: #cdd4dd;
   --color-ink: #16191d;
   --color-ink-muted: #5f6773;
   --color-ink-subtle: #8a94a6;
@@ -73,6 +75,104 @@ body {
   background-position: right -10px bottom -10px;
   background-repeat: no-repeat;
   background-size: 190px;
+}
+
+/* ---------- Gaya retro arcade ----------
+   Satu bahasa visual untuk tombol, kartu, dan dock: bayangan keras tanpa blur dengan warna
+   sisi yang lebih gelap, dan gerak bertahap (steps) seperti game 8-bit. Sengaja tidak di
+   dalam @layer agar box-shadow dan transisinya tidak tertimpa utilitas Tailwind. */
+
+/* Tombol 3D: --edge = warna sisi bawah, --depth = tebal sisi. Ditekan: tombol tenggelam.
+   Nilai bawaan lewat fallback var(), bukan deklarasi di sini, karena aturan tanpa layer
+   akan mengalahkan utilitas [--edge:...] dari Tailwind. */
+.btn-3d {
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 0.22),
+    0 var(--depth, 4px) 0 var(--edge, var(--color-line-strong));
+  transition:
+    transform 90ms steps(2, end),
+    box-shadow 90ms steps(2, end),
+    background-color 150ms,
+    color 150ms;
+}
+.btn-3d:hover:not(:disabled),
+.btn-3d-host:hover .btn-3d {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 0.22),
+    0 calc(var(--depth, 4px) + 1px) 0 var(--edge, var(--color-line-strong));
+}
+.btn-3d:active:not(:disabled),
+.btn-3d-host:active .btn-3d {
+  transform: translateY(var(--depth, 4px));
+  box-shadow:
+    inset 0 2px 0 rgb(0 0 0 / 0.12),
+    0 0 0 var(--edge, var(--color-line-strong));
+  transition-duration: 40ms;
+}
+/* Menu yang sedang dibuka tampil seperti tombol yang tertahan ke bawah. */
+.btn-3d.is-active,
+.btn-3d.is-active:hover,
+.btn-3d-host:hover .btn-3d.is-active {
+  transform: translateY(calc(var(--depth, 4px) - 1px));
+  box-shadow:
+    inset 0 2px 0 rgb(0 0 0 / 0.14),
+    0 1px 0 var(--edge, var(--color-line-strong));
+}
+.btn-3d:disabled {
+  box-shadow: 0 calc(var(--depth, 4px) / 2) 0 var(--edge, var(--color-line-strong));
+}
+
+/* Kartu: sedikit terangkat dengan bayangan keras saat disorot (hanya perangkat dengan pointer). */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .card-lift {
+    transition:
+      translate 120ms steps(3, end),
+      box-shadow 120ms steps(3, end);
+  }
+  .card-lift:hover {
+    translate: 0 -3px;
+    box-shadow:
+      var(--lift-base, var(--shadow-card)),
+      0 5px 0 var(--lift-edge, var(--color-line-strong));
+  }
+}
+
+/* Muncul bertahap saat di-scroll (CSS scroll-driven, tanpa JavaScript). Browser yang belum
+   mendukung, atau pengguna yang memilih kurangi gerakan, langsung melihat konten. */
+@keyframes reveal-step {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-step steps(4, end) both;
+      animation-timeline: view();
+      /* Jarak tetap (bukan persen tinggi kartu): kartu tinggi yang sudah terlihat saat halaman
+         dibuka langsung tampil penuh, tidak setengah transparan. */
+      animation-range: entry 0% entry 140px;
+    }
+  }
+}
+
+/* Dock navigasi HP masuk dari bawah saat halaman dibuka. */
+@keyframes dock-in {
+  from {
+    transform: translateY(120%);
+  }
+  to {
+    transform: none;
+  }
+}
+.dock-in {
+  animation: dock-in 280ms steps(4, end) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
